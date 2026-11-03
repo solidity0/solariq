@@ -405,6 +405,8 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 .col-6040 { display: grid; grid-template-columns: 6fr 4fr; gap: 20px; }
+/* Grid columns may shrink below their content; wide tables scroll inside instead of pushing off-screen */
+.two-col > *, .three-col > *, .col-6040 > *, .viz-grid > * { min-width: 0; }
 .form-group { margin-bottom: 16px; }
 .form-label { display: block; font-size: 11px; font-weight: 600; color: var(--text3); margin-bottom: 6px; letter-spacing: .06em; text-transform: uppercase; }
 .form-input { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-body); font-size: 13.5px; outline: none; transition: all .18s; }
@@ -803,6 +805,16 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
 .tier-footer { padding: 14px 22px; }
 .tier-recommended { position: absolute; top: 12px; right: 12px; background: var(--accent); color: #08090c; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 20px; }
 
+/* Phone layouts — placed last so they win over the desktop grid rules above */
+@media(max-width:768px){
+  .viz-grid, .tier-grid, .crm-add-row { grid-template-columns: 1fr; }
+  .crm-pipeline { grid-template-columns: 1fr; gap: 10px; min-height: 0; }
+  #page-learn [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+}
+@media(min-width:769px) and (max-width:900px){
+  .crm-pipeline { grid-template-columns: 1fr 1fr; }
+}
+
 </style>
 </head>
 <body>
@@ -1024,7 +1036,7 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
                 <option data-currency="NGN">Owerri</option>
               </optgroup>
               <optgroup label="🇺🇸 United States">
-                <option data-currency="USD" selected>New York</option>
+                <option data-currency="USD">New York</option>
                 <option data-currency="USD">Los Angeles</option>
                 <option data-currency="USD">Houston</option>
                 <option data-currency="USD">Chicago</option>
@@ -1220,15 +1232,15 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
           <div class="breakdown-val" style="color:white" id="calc-total-batt-energy">0 Wh</div>
         </div>
         <div class="breakdown-item">
-          <div class="breakdown-label" style="color:white">Solar Power Needed<span>Total Battery Energy ÷ Sun hrs</span></div>
+          <div class="breakdown-label" style="color:white">Solar Power Needed<span>Adj. Energy ÷ Sun hrs</span></div>
           <div class="breakdown-val" style="color:white" id="calc-solar-power">0 W</div>
         </div>
         <div class="breakdown-item">
-          <div class="breakdown-label" style="color:white">Adjusted Panel Capacity<span>(Solar Power × Energy%) + Solar Power</span></div>
+          <div class="breakdown-label" style="color:white">Adjusted Panel Capacity<span>Solar Power ÷ Panel derating</span></div>
           <div class="breakdown-val" style="color:white" id="calc-adj-panel">0 W</div>
         </div>
         <div class="breakdown-item" style="background:rgba(245,200,66,.08);margin:0 -24px;padding:10px 24px;border-bottom:1px solid var(--border)">
-          <div class="breakdown-label" style="color:white">Number of Panels<span>Adj. Capacity ÷ (Panel W × 0.7)</span></div>
+          <div class="breakdown-label" style="color:white">Number of Panels<span>Adj. Capacity ÷ Panel W</span></div>
           <div class="breakdown-val" style="color:var(--yellow)" id="calc-num-panels">0 panels</div>
         </div>
         <div class="breakdown-item">
@@ -1538,8 +1550,8 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
         <div class="form-group"><label class="form-label">Peak Sun Hours</label>
           <input type="number" class="form-input" id="cfg-sun" value="4.5" min="1" max="12" step="0.5">
         </div>
-        <div class="form-group"><label class="form-label">Energy Used (%)</label>
-          <input type="number" class="form-input" id="cfg-energy-used-pct" value="90" min="1" max="100" step="1">
+        <div class="form-group"><label class="form-label">Panel Derating (%)</label>
+          <input type="number" class="form-input" id="cfg-energy-used-pct" value="80" min="50" max="100" step="1" title="Share of nameplate output panels really deliver after heat, dust and wiring losses">
         </div>
       </div>
       </details>
@@ -2038,6 +2050,7 @@ const DEFAULT_CONFIG = {
   individualBattAh: 200,
   individualPanelW: 400,
   energyUsedPct: 0.90,
+  panelDerate: 0.80,           // real panel output vs nameplate (heat, dust, wiring)
   inverterEfficiency: 1.25,
   selectedInverterKVA: 0,                                    // 0 = auto round-up
   inverterStandardSizes: [1, 1.5, 2, 3, 5, 7.5, 10, 15, 20], // standard kVA sizes
@@ -2057,12 +2070,14 @@ const DEFAULT_CONFIG = {
 
 const DEFAULT_COMPANY = {
   name: 'SolarIQ Ltd',
-  address: '123 Energy Way, New York',
-  phone: '+1 555 000 0000',
+  address: '',
+  phone: '',
   email: 'solartechbase@gmail.com',
-  web: 'www.solariq.com',
-  currency: 'USD',
+  web: '',
+  currency: 'NGN',
 };
+// Placeholder values shipped in older versions — replaced on load if never edited
+const OLD_PLACEHOLDER_COMPANY = { address: '123 Energy Way, New York', phone: '+1 555 000 0000', web: 'www.solariq.com' };
 
 // ============================================================
 // STATE
@@ -2141,6 +2156,13 @@ function loadFromStorage() {
       // Merge so new config keys added in code are never wiped by old localStorage
       state.config  = { ...DEFAULT_CONFIG,  ...(parsed.config  || {}) };
       state.company = { ...DEFAULT_COMPANY, ...(parsed.company || {}) };
+      if (state.company.address === OLD_PLACEHOLDER_COMPANY.address) {
+        // Company details were never filled in: drop the US placeholders and use Naira
+        Object.keys(OLD_PLACEHOLDER_COMPANY).forEach(k => {
+          if (state.company[k] === OLD_PLACEHOLDER_COMPANY[k]) state.company[k] = DEFAULT_COMPANY[k];
+        });
+        if (state.company.currency === 'USD') state.company.currency = DEFAULT_COMPANY.currency;
+      }
       state.customAppliances  = parsed.customAppliances  || [];
       state.activePriceTab    = parsed.activePriceTab    || 'user';
       state.catalog           = parsed.catalog           || null;
@@ -2259,7 +2281,8 @@ function fmtCur(amountNGN) {
   let str;
   if (abs >= 1000000)      str = (converted / 1000000).toFixed(2) + 'M';
   else if (abs >= 1000)    str = Math.round(converted).toLocaleString('en-US');
-  else if (abs >= 1)       str = converted.toFixed(2);
+  else if (abs === 0)      str = '0';
+  else if (abs >= 0.01)    str = converted.toFixed(2);
   else                     str = converted.toFixed(4);
   return cur.symbol + str;
 }
@@ -2516,7 +2539,6 @@ function renderApplianceGrid() {
 }
 
 function adjustQty(id, delta) {
-  console.log('adjustQty called:', id, delta, state.appliances[id]);
   if (!state.appliances[id] || typeof state.appliances[id] !== 'object') {
     const a = DEFAULT_APPLIANCES.find(x => x.id === id);
     state.appliances[id] = { qty: 0, hours: a ? a.defaultHours : 8 };
@@ -2631,7 +2653,9 @@ function calcSystem(appliances, opts) {
   const backupDays = opts.backupDays || cfg.daysOfAutonomy || 1;
   const batteryKWh = Math.ceil(adjustedEnergyKWh * backupDays * dod * 10) / 10;
 
-  const battCapacityAh    = (adjustedEnergyWh / ((cfg.battVoltage||48) * (cfg.battDod||0.8) * (cfg.battEfficiency||0.95))) * backupDays;
+  // Usable depth of discharge: lithium uses the DoD setting, lead-acid only 1/dodLead (≈50%)
+  const usableDod         = batteryType === 'lithium' ? (cfg.battDod||0.8) : 1 / (cfg.dodLead||2.0);
+  const battCapacityAh    = (adjustedEnergyWh / ((cfg.battVoltage||48) * usableDod * (cfg.battEfficiency||0.95))) * backupDays;
   const battRuntimeHrs    = backupDays * 24;
 
   // Total batteries = ceil(battCapacityAh / individual Ah), then round per voltage rules
@@ -2652,9 +2676,11 @@ function calcSystem(appliances, opts) {
   const totalBattEnergyWh = battCapacityWh;
 
   // ── Step 4: Solar panels ───────────────────────────────────
-  const solarPowerW    = totalBattEnergyWh / (cfg.sunHours || 4.5);
-  const adjustedPanelW = solarPowerW * (1 + (cfg.energyUsedPct || 0.90));
-  const numPanels      = Math.ceil(adjustedPanelW / ((cfg.individualPanelW || 400) * 0.7));
+  // Array must refill one day's adjusted demand in the peak sun hours,
+  // then oversize for heat, dust and wiring losses (panel derating)
+  const solarPowerW    = adjustedEnergyWh / (cfg.sunHours || 4.5);
+  const adjustedPanelW = solarPowerW / (cfg.panelDerate || 0.80);
+  const numPanels      = Math.ceil(adjustedPanelW / (cfg.individualPanelW || 400));
   const panelW         = numPanels * (cfg.individualPanelW || 400);
 
   // ── Step 5: Inverter ───────────────────────────────────────
@@ -2688,18 +2714,22 @@ function calcSystem(appliances, opts) {
   const subtotal     = equipTotal + cInstall;
   const markupAmt    = subtotal * markup;
   const total        = subtotal + markupAmt;
+  // Nothing to power yet — don't price a system
+  const empty        = totalLoad <= 0;
 
   // ── Return all results ─────────────────────────────────────
+  const z = v => empty ? 0 : v;
   return {
+    empty,
     totalLoad, totalEnergyWh, totalEnergyKWh, dailyKWh,
     adjustedEnergyWh, adjustedEnergyKWh,
-    panelW, batteryKWh, installedBattKWh,
-    battCapacityAh, battCapacityWh, battRuntimeHrs,
+    panelW, batteryKWh: Math.round(installedBattKWh * 10) / 10, installedBattKWh,
+    battCapacityAh, battCapacityWh, battRuntimeHrs: z(battRuntimeHrs),
     totalBatteries, totalBattEnergyWh, solarPowerW, adjustedPanelW, numPanels,
-    inverterSizeW, inverterKVA, selectedInverterKVA,
+    inverterSizeW, inverterKVA, selectedInverterKVA: z(selectedInverterKVA),
     deviceRows,
-    cPanels, cBattery, cInverter, cCabling, cMounting, cAccessories,
-    equipTotal, cInstall, markupAmt, total
+    cPanels, cBattery, cInverter: z(cInverter), cCabling: z(cCabling), cMounting: z(cMounting), cAccessories: z(cAccessories),
+    equipTotal: z(equipTotal), cInstall: z(cInstall), markupAmt: z(markupAmt), total: z(total)
   };
 }
 
@@ -2744,7 +2774,7 @@ function recalculate() {
   set('calc-adj-panel',       fmt(Math.round(r.adjustedPanelW)) + ' W (' + (r.adjustedPanelW/1000).toFixed(2) + ' kW)');
   set('calc-num-panels',      r.numPanels + ' panels (' + (state.config.individualPanelW||400) + 'W each)');
   set('calc-batt-runtime',    Math.round(r.battRuntimeHrs).toLocaleString() + ' hrs');
-  set('calc-total-batts',     r.totalBatteries > 0 ? r.totalBatteries + ' batteries (' + (state.config.individualBattAh||200) + 'Ah each)' : 'N/A — voltage mismatch');
+  set('calc-total-batts',     r.totalBatteries > 0 ? r.totalBatteries + ' batteries (' + (state.config.individualBattAh||200) + 'Ah each)' : '—');
   // Battery voltage beside total batteries label
   const bvl = document.getElementById('calc-batt-voltage-label');
   if (bvl) bvl.textContent = 'Capacity ÷ individual Ah · ' + (state.config.battVoltage||48) + 'V';
@@ -2763,8 +2793,9 @@ function recalculate() {
   // Editable inverter qty
   const invQtyEl  = document.getElementById('inv-qty');
   const invQty    = invQtyEl ? (parseInt(invQtyEl.value) || 1) : 1;
-  const invUnitPrice = r.cInverter;
-  const invTotalPrice = invUnitPrice * invQty;
+  // r.cInverter already covers every inverter
+  const invTotalPrice = r.cInverter;
+  const invUnitPrice = invTotalPrice / invQty;
 
   set('calc-inv-desc',       `${((r.selectedInverterKVA||0) * 0.8).toFixed(1)} kW · ${invVolt}V · ${invBrand}`);
   set('calc-inv-unit-price', `${fmtCur(invUnitPrice)} × ${invQty}`);
@@ -2786,7 +2817,7 @@ function recalculate() {
 
   // Compatibility check — only when on new-audit page
   if (document.getElementById('page-new-audit')?.classList.contains('active')) {
-    const savings = calcSavings(r.total, r.totalEnergyKWh);
+    const savings = r.empty ? null : calcSavings(r.total, r.totalEnergyKWh);
     renderSavingsPanel(savings);
     renderFinancingPanel(r.total);
     runCompatibilityCheck(r);
@@ -2854,6 +2885,7 @@ async function saveAudit() {
 async function generateQuote(auditOverride) {
   const audit = auditOverride || buildCurrentAudit();
   const r = audit.result;
+  if (!r || r.empty || !(r.totalLoad > 0)) { showToast('Please add some appliances first.', 'warn'); return; }
   const co = state.company;
   const qId = 'QT-' + Date.now().toString().slice(-6);
 
@@ -2895,7 +2927,7 @@ function renderQuoteHTML(quote) {
     <div class="quote-header">
       <div>
         <div class="quote-logo">&#9889; ${co.name}<span>${co.address}</span></div>
-        <div style="font-size:12px;color:#6b7280;margin-top:6px">${co.phone} &middot; ${co.email}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:6px">${[co.phone, co.email].filter(Boolean).join(' &middot; ')}</div>
       </div>
       <div class="quote-meta">
         <strong style="color:#111;font-size:14px">QUOTATION</strong><br>
@@ -3071,7 +3103,7 @@ function downloadPDF() {
   doc.setFontSize(14); doc.setFont('helvetica', 'bold');
   doc.text('SolarIQ - ' + (co.name || ''), MARGIN, 12);   // no emoji — jsPDF can't render
   doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-  doc.text((co.phone || '') + '  |  ' + (co.email || ''), MARGIN, 16.5);
+  doc.text([co.phone, co.email].filter(Boolean).join('  |  '), MARGIN, 16.5);
   doc.text('QUOTATION  ' + q.id, PAGE_W - MARGIN, 12, { align: 'right' });
   doc.text(new Date(q.createdAt).toLocaleDateString('en-NG'), PAGE_W - MARGIN, 16.5, { align: 'right' });
   y = 28;
@@ -3191,7 +3223,7 @@ function renderAuditsList() {
       </div>
       <div class="audit-badges">
         <span class="badge badge-orange">${fmt(a.result.totalLoad)}W</span>
-        <span class="badge badge-blue">${a.result.inverterKVA.toFixed(1)} kVA</span>
+        <span class="badge badge-blue">${(a.result.selectedInverterKVA || a.result.inverterKVA || 0).toFixed(1)} kVA</span>
         <span class="badge badge-green">${fmtCur(a.result.total)}</span>
       </div>
     </div>
@@ -3740,7 +3772,7 @@ function populateSettingsForm() {
   s('cfg-batt-eff',          cfg.battEfficiency||0.95);
   s('cfg-indiv-batt-ah',     cfg.individualBattAh||200);
   s('cfg-panel-w',           cfg.individualPanelW||400);
-  s('cfg-energy-used-pct',   (cfg.energyUsedPct||0.90)*100);
+  s('cfg-energy-used-pct',   Math.round((cfg.panelDerate||0.80)*100));
   s('cfg-battery-type',      cfg.batteryType||'lithium');
   s('cfg-battery-brand',     cfg.batteryBrand||'Itel');
   s('cfg-panel-brand',       cfg.panelBrand||'Jinko Solar');
@@ -3779,7 +3811,7 @@ function saveSettings() {
     battEfficiency: parseFloat(document.getElementById('cfg-batt-eff').value)||0.95,
     individualBattAh: parseFloat(document.getElementById('cfg-indiv-batt-ah').value)||200,
     individualPanelW: parseFloat(document.getElementById('cfg-panel-w').value)||400,
-    energyUsedPct: (parseFloat(document.getElementById('cfg-energy-used-pct').value)||90) / 100,
+    panelDerate: Math.min(1, Math.max(0.5, (parseFloat(document.getElementById('cfg-energy-used-pct').value)||80) / 100)),
     inverterEfficiency: parseFloat(document.getElementById('cfg-inv-eff').value)||1.25,
     selectedInverterKVA: parseFloat(document.getElementById('cfg-selected-inv-kva').value)||0,
     inverterStandardSizes: (document.getElementById('cfg-inv-std-sizes').value||'')
@@ -4035,7 +4067,7 @@ function generateTieredQuote() {
     r: calcSystem(state.appliances, { batteryType: t.batteryType, markup, backupDays: t.backupDays })
   })).filter(t => t.r);
 
-  if (!results.length) { showToast('Please add some appliances first.', 'warn'); return; }
+  if (!results.length || results[0].r.empty) { showToast('Please add some appliances first.', 'warn'); return; }
 
   const co = state.company;
   const dateStr = new Date().toLocaleDateString('en-NG', { year:'numeric', month:'long', day:'numeric' });
@@ -4119,10 +4151,12 @@ function generateTierQuote(batteryType, backupDays) {
 // SAVINGS COMPARISON
 // ============================================================
 function calcSavings(totalCost, totalEnergyKWh) {
-  const tariff    = parseFloat(document.getElementById('sc-tariff')?.value) || 0;
+  // Prices are typed in the active currency; the engine works in Naira
+  const rate      = getActiveCurrency().rate || 1;
+  const tariff    = (parseFloat(document.getElementById('sc-tariff')?.value) || 0) / rate;
   const gridHrs   = parseFloat(document.getElementById('sc-grid-hrs')?.value) || 0;
   const genLitres = parseFloat(document.getElementById('sc-gen-litres')?.value) || 0;
-  const fuelPrice = parseFloat(document.getElementById('sc-fuel-price')?.value) || 0;
+  const fuelPrice = (parseFloat(document.getElementById('sc-fuel-price')?.value) || 0) / rate;
 
   if (!tariff && !genLitres) return null;
 
@@ -4170,7 +4204,8 @@ function renderSavingsPanel(savings) {
 // ============================================================
 function renderFinancingPanel(total) {
   const panel = document.getElementById('financing-panel');
-  if (!panel || !total) return;
+  if (!panel) return;
+  if (!total) { panel.innerHTML = '<div style="font-size:12px;color:var(--text3)">Add appliances to see payment options.</div>'; return; }
   const depositPct = parseFloat(document.getElementById('fin-deposit')?.value) || 30;
   const months     = parseInt(document.getElementById('fin-months')?.value)   || 12;
   const fmt = n => Math.round(n).toLocaleString('en-NG');

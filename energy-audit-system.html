@@ -426,6 +426,10 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
 .data-table td.mono { font-family: monospace; font-size: 12.5px; color: var(--text); }
 .data-table td.bold { color: var(--text); font-weight: 600; }
 .appl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+/* A divider under every appliance so each size box clearly belongs to its row */
+.appl-table tbody tr td { border-bottom: 1px solid rgba(255,255,255,.13); }
+.appl-table tbody tr:last-child td { border-bottom: none; }
+body.light-theme .appl-table tbody tr td { border-bottom-color: #d1d5db; }
 .appl-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -10px; padding: 0 10px; }
 @media(max-width:768px){
   /* ── APP LAYOUT ── */

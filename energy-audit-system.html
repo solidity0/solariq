@@ -430,6 +430,11 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
 .appl-table tbody tr td { border-bottom: 1px solid rgba(255,255,255,.13); }
 .appl-table tbody tr:last-child td { border-bottom: none; }
 body.light-theme .appl-table tbody tr td { border-bottom-color: #d1d5db; }
+/* Qty, hours and energy sit on the same line as the size box (bottom of the Device cell) */
+.appl-table tbody td { vertical-align: bottom; }
+.appl-table .appl-size-input, .appl-table .hours-input { height: 30px; box-sizing: border-box; }
+.appl-table .appl-qty-ctrl { height: 30px; }
+.appl-table .appl-device-load, .appl-table .appl-energy { display: inline-block; line-height: 30px; }
 .appl-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -10px; padding: 0 10px; }
 @media(max-width:768px){
   /* ── APP LAYOUT ── */

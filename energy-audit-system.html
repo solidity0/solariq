@@ -837,6 +837,30 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
 @media(max-width:768px){
   .viz-grid, .tier-grid, .crm-add-row { grid-template-columns: 1fr; }
   .crm-pipeline { grid-template-columns: 1fr; gap: 10px; min-height: 0; }
+  /* Appliance load: one card per device, its options stacked in a column */
+  .appl-table-wrap { overflow-x: visible; margin: 0; padding: 0; }
+  #appl-table-main { min-width: 0; display: block; }
+  #appl-table-main thead { display: none; }
+  #appl-table-main tbody, #appl-table-main tfoot { display: block; }
+  #appl-table-main tbody tr { display: block; background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
+  #appl-table-main td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border: none; }
+  #appl-table-main td:nth-child(4) { display: flex; }
+  #appl-table-main tbody td:first-child { flex-wrap: wrap; justify-content: flex-start; padding-bottom: 9px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+  #appl-table-main tbody td[data-label]::before { content: attr(data-label); font-size: 12px; color: var(--text2); font-weight: 500; }
+  #appl-table-main .appl-name { font-size: 14px; }
+  #appl-table-main .appl-size { margin-left: auto; font-size: 11px; }
+  #appl-table-main .appl-size-input { width: 70px; }
+  #appl-table-main .appl-qty-ctrl { gap: 10px; }
+  #appl-table-main .qty-btn { width: 34px; height: 34px; font-size: 18px; }
+  #appl-table-main .qty-val { min-width: 26px; font-size: 16px; }
+  #appl-table-main .hours-input { width: 72px; }
+  #appl-table-main .appl-device-load, #appl-table-main .appl-energy { font-size: 13px; }
+  #appl-table-main tfoot tr { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; }
+  #appl-table-main tfoot tr { flex-wrap: wrap; justify-content: flex-start; column-gap: 18px; row-gap: 4px; }
+  #appl-table-main tfoot td { padding: 0; background: none; border: none; }
+  #appl-table-main tfoot td:first-child { flex: 1 1 100%; }
+  #appl-table-main tfoot span { white-space: nowrap; }
+  #appl-table-main tfoot td:empty { display: none; }
   #page-learn [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
 }
 @media(min-width:769px) and (max-width:900px){
@@ -2542,16 +2566,16 @@ function renderApplianceGrid() {
     return `
     <tr id="row-${a.id}">
       <td><span class="appl-name">${a.icon} ${a.name}</span>${sizeInput}</td>
-      <td>
+      <td data-label="Quantity">
         <div class="appl-qty-ctrl">
           <button class="qty-btn" onclick="adjustQty('${a.id}',-1)">−</button>
           <div class="qty-val" id="qty-${a.id}">${d.qty}</div>
           <button class="qty-btn" onclick="adjustQty('${a.id}',1)">+</button>
         </div>
       </td>
-      <td><input class="hours-input" type="number" id="hrs-${a.id}" value="${d.hours}" min="0" max="24" onchange="updateHours('${a.id}', this.value)"></td>
-      <td><span class="appl-device-load" id="dload-${a.id}">${deviceLoad} W</span></td>
-      <td><span class="appl-energy" id="denergy-${a.id}">${deviceEnergy} Wh</span></td>
+      <td data-label="Hours per day"><input class="hours-input" type="number" id="hrs-${a.id}" value="${d.hours}" min="0" max="24" onchange="updateHours('${a.id}', this.value)"></td>
+      <td data-label="Device load"><span class="appl-device-load" id="dload-${a.id}">${deviceLoad} W</span></td>
+      <td data-label="Energy per day"><span class="appl-energy" id="denergy-${a.id}">${deviceEnergy} Wh</span></td>
     </tr>`;
   }).join('');
 

@@ -76,6 +76,7 @@ window.toggleTheme = function() {
 </script>
 <script src="config.js"></script>
 <script src="cloud-sync.js"></script>
+<script src="sizing-engine.js"></script>
 <style>
 
 :root {
@@ -805,6 +806,14 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
 .tier-footer { padding: 14px 22px; }
 .tier-recommended { position: absolute; top: 12px; right: 12px; background: var(--accent); color: #08090c; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 20px; }
 
+/* Model pickers and itemised accessories in the Equipment Breakdown */
+.equip-select { display: block; width: 100%; max-width: 240px; margin-top: 6px; padding: 5px 8px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: var(--font-body); font-size: 11.5px; outline: none; }
+.bom-details { margin: 0 -24px; padding: 6px 24px 10px; border-bottom: 1px solid var(--border); }
+.bom-details summary { font-size: 11px; color: var(--purple); cursor: pointer; padding: 4px 0; }
+.bom-row { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--text2); padding: 4px 0; border-bottom: 1px dashed var(--border); }
+.bom-row:last-child { border-bottom: none; }
+.bom-row b { color: var(--text); font-weight: 600; white-space: nowrap; }
+
 /* Phone layouts — placed last so they win over the desktop grid rules above */
 @media(max-width:768px){
   .viz-grid, .tier-grid, .crm-add-row { grid-template-columns: 1fr; }
@@ -1183,7 +1192,7 @@ html { touch-action: manipulation; }
       <input type="hidden" id="battery-type" value="lithium">
       <input type="hidden" id="inverter-brand" value="Growatt">
       <input type="hidden" id="panel-brand" value="Jinko Solar">
-      <input type="hidden" id="markup" value="20">
+      <input type="hidden" id="markup" value="0">
       <!-- SAVINGS COMPARISON -->
       <div class="card" style="margin-bottom:20px">
         <div class="card-title">💡 Savings Comparison <span class="badge">Optional</span></div>
@@ -1227,27 +1236,27 @@ html { touch-action: manipulation; }
           <div class="breakdown-val" style="color:var(--yellow)" id="calc-adjusted">0 Wh</div>
         </div>
         <div class="breakdown-item" style="background:rgba(245,200,66,.08);margin:0 -24px;padding:10px 24px;border-bottom:1px solid var(--border)">
-          <div class="breakdown-label" style="color:white">Battery Capacity (Ah)<span>Adj. Energy ÷ (V × DoD × Eff.) × Days</span></div>
+          <div class="breakdown-label" style="color:white">Battery Capacity (Ah)<span>Adj. Energy ÷ (V × Eff. × DoD) × Days</span></div>
           <div class="breakdown-val" style="color:var(--yellow)" id="calc-batt-ah">0 Ah</div>
         </div>
         <div class="breakdown-item">
-          <div class="breakdown-label" style="color:white">Battery Capacity (Wh)<span>Capacity Ah × Voltage</span></div>
+          <div class="breakdown-label" style="color:white">Battery Bank (Wh)<span>Batteries × Ah × Voltage</span></div>
           <div class="breakdown-val" style="color:white" id="calc-batt-wh">0 Wh</div>
         </div>
         <div class="breakdown-item">
-          <div class="breakdown-label" style="color:white">Total Battery Energy<span>Capacity Ah × Voltage × Days of Autonomy</span></div>
+          <div class="breakdown-label" style="color:white">Daily Solar Generation<span>Panels × W × Panel eff. × Sun hrs</span></div>
           <div class="breakdown-val" style="color:white" id="calc-total-batt-energy">0 Wh</div>
         </div>
         <div class="breakdown-item">
-          <div class="breakdown-label" style="color:white">Solar Power Needed<span>Adj. Energy ÷ Sun hrs</span></div>
+          <div class="breakdown-label" style="color:white">Solar Power Needed<span>Battery bank × (1 + charge loss) ÷ Sun hrs</span></div>
           <div class="breakdown-val" style="color:white" id="calc-solar-power">0 W</div>
         </div>
         <div class="breakdown-item">
-          <div class="breakdown-label" style="color:white">Adjusted Panel Capacity<span>Solar Power ÷ Panel derating</span></div>
+          <div class="breakdown-label" style="color:white">Panels Needed<span>Solar Power ÷ Panel W ÷ Panel eff.</span></div>
           <div class="breakdown-val" style="color:white" id="calc-adj-panel">0 W</div>
         </div>
         <div class="breakdown-item" style="background:rgba(245,200,66,.08);margin:0 -24px;padding:10px 24px;border-bottom:1px solid var(--border)">
-          <div class="breakdown-label" style="color:white">Number of Panels<span>Adj. Capacity ÷ Panel W</span></div>
+          <div class="breakdown-label" style="color:white">Panels Installed<span id="calc-panel-strings-label">Fitted to inverter strings</span></div>
           <div class="breakdown-val" style="color:var(--yellow)" id="calc-num-panels">0 panels</div>
         </div>
         <div class="breakdown-item">
@@ -1259,15 +1268,15 @@ html { touch-action: manipulation; }
           <div class="breakdown-val" style="color:var(--yellow)" id="calc-total-batts">0 batteries</div>
         </div>
         <div class="breakdown-item">
-          <div class="breakdown-label" style="color:white">Inverter Size (W)<span>Total Load × Efficiency</span></div>
+          <div class="breakdown-label" style="color:white">Inverter Size (W)<span>Load ÷ power factor ÷ inverter eff.</span></div>
           <div class="breakdown-val" style="color:white" id="calc-inverter-w">0 W</div>
         </div>
         <div class="breakdown-item">
-          <div class="breakdown-label" style="color:white">Inverter Size (kW)<span>Inverter W ÷ 0.8 power factor ÷ 1000</span></div>
+          <div class="breakdown-label" style="color:white">Inverter Size (kW)<span>Rounded up to a whole kW</span></div>
           <div class="breakdown-val" style="color:white" id="calc-inverter">0 kW @ 0V</div>
         </div>
         <div class="breakdown-item" style="background:rgba(245,200,66,.08);margin:0 -24px;padding:10px 24px;border-bottom:1px solid var(--border)">
-          <div class="breakdown-label" style="color:white">Selected Inverter Size<span>Auto rounded to next standard size</span></div>
+          <div class="breakdown-label" style="color:white">Selected Inverter<span id="calc-selected-inv-label">Model × units</span></div>
           <div class="breakdown-val" style="color:var(--yellow)" id="calc-selected-inv">— kW</div>
         </div>
         <div class="divider"></div>
@@ -1276,13 +1285,15 @@ html { touch-action: manipulation; }
 
         <!-- Inverter -->
         <div class="breakdown-item">
-          <div class="breakdown-label">⚡ Inverter<span id="calc-inv-desc">— kVA · —</span></div>
+          <div class="breakdown-label">⚡ Inverter<span id="calc-inv-desc">— kW · —</span>
+            <select class="equip-select" id="sel-inverter" onchange="onDesignChoice('inverterId', this.value)"></select>
+          </div>
           <div style="text-align:right">
             <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:3px">
               <span style="font-size:11px;color:var(--text3)">Qty:</span>
-              <input type="number" id="inv-qty" value="1" min="1" max="20"
-                style="width:42px;padding:2px 5px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:11px;outline:none;text-align:center"
-                oninput="recalculate()">
+              <input type="number" id="inv-qty" value="" placeholder="auto" min="1" max="20"
+                style="width:48px;padding:2px 5px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:11px;outline:none;text-align:center"
+                oninput="onDesignChoice('invUnits', this.value)">
             </div>
             <div style="font-size:11px;color:var(--text3)" id="calc-inv-unit-price">—</div>
             <div class="breakdown-val" id="calc-inv-price">—</div>
@@ -1291,7 +1302,9 @@ html { touch-action: manipulation; }
 
         <!-- Solar Panels -->
         <div class="breakdown-item">
-          <div class="breakdown-label">☀️ Solar Panels<span id="calc-panel-desc">— · —W each</span></div>
+          <div class="breakdown-label">☀️ Solar Panels<span id="calc-panel-desc">— · —W each</span>
+            <select class="equip-select" id="sel-panel" onchange="onDesignChoice('panelId', this.value)"></select>
+          </div>
           <div style="text-align:right">
             <div style="font-size:11px;color:var(--text3)" id="calc-panel-qty">— panels</div>
             <div style="font-size:11px;color:var(--text3)" id="calc-panel-unit-price">—</div>
@@ -1301,7 +1314,9 @@ html { touch-action: manipulation; }
 
         <!-- Battery -->
         <div class="breakdown-item">
-          <div class="breakdown-label">🔋 Battery<span id="calc-batt-desc">— · —Ah —V</span></div>
+          <div class="breakdown-label">🔋 Battery<span id="calc-batt-desc">— · —Ah —V</span>
+            <select class="equip-select" id="sel-battery" onchange="onDesignChoice('batteryId', this.value)"></select>
+          </div>
           <div style="text-align:right">
             <div style="font-size:11px;color:var(--text3)" id="calc-batt-qty">— units</div>
             <div style="font-size:11px;color:var(--text3)" id="calc-batt-unit-price">—</div>
@@ -1311,23 +1326,45 @@ html { touch-action: manipulation; }
 
         <!-- Accessories -->
         <div class="breakdown-item" style="background:rgba(139,92,246,.04);margin:0 -24px;padding:10px 24px;border-bottom:1px solid var(--border)">
-          <div class="breakdown-label">🔧 Accessories<span>Cabling, breakers — ⅓ of equipment</span></div>
+          <div class="breakdown-label">🔧 Accessories<span>Breakers, cables, mounting — priced from Price Lists</span></div>
           <div style="text-align:right">
             <div class="breakdown-val" style="color:var(--purple)" id="calc-accessories">—</div>
           </div>
         </div>
+        <details class="bom-details" id="calc-bom-wrap">
+          <summary>Show itemised accessories</summary>
+          <div id="calc-bom"></div>
+        </details>
 
         <!-- Installation -->
         <div class="breakdown-item">
           <div class="breakdown-label">🛠 Installation
             <span style="display:flex;align-items:center;gap:4px;margin-top:3px">
-              <input type="number" id="install-pct" value="10" min="0" max="100"
+              <input type="number" id="install-pct" value="8" min="0" max="100"
                 style="width:44px;padding:2px 5px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:11px;outline:none;text-align:center"
                 oninput="recalculate()">
-              <span style="font-size:10.5px;color:var(--text3)">% of total equipment</span>
+              <span style="font-size:10.5px;color:var(--text3)">% of inverter, panels &amp; batteries</span>
             </span>
           </div>
           <div class="breakdown-val" id="calc-install">—</div>
+        </div>
+
+        <!-- Logistics -->
+        <div class="breakdown-item">
+          <div class="breakdown-label">🚚 Logistics
+            <span style="display:flex;align-items:center;gap:4px;margin-top:3px">
+              <input type="number" id="logistics-amt" value="0" min="0" step="1000"
+                style="width:90px;padding:2px 5px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:11px;outline:none;text-align:center"
+                oninput="recalculate()">
+              <span style="font-size:10.5px;color:var(--text3)" id="lbl-logistics-unit">flat amount</span>
+            </span>
+          </div>
+          <div class="breakdown-val" id="calc-logistics">—</div>
+        </div>
+
+        <div class="breakdown-item">
+          <div class="breakdown-label">🤝 Professional Service<span>1-year free support</span></div>
+          <div class="breakdown-val" style="color:var(--green)">FREE</div>
         </div>
 
         <div class="breakdown-total">
@@ -1436,7 +1473,7 @@ html { touch-action: manipulation; }
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
         <div class="page-title">Price Lists</div>
-        <div class="page-desc">Manage dealer prices — user prices auto-calculated at dealer + 10%</div>
+        <div class="page-desc">Your dealer and user price lists — quotes use the user price</div>
       </div>
       <div style="display:flex;gap:10px">
         <button class="btn btn-secondary" onclick="resetCatalog()">↺ Reset Defaults</button>
@@ -1493,146 +1530,65 @@ html { touch-action: manipulation; }
       <button class="btn btn-primary" onclick="saveSettings()">Save Company Info</button>
     </div>
     <div class="card">
-      <!-- Hidden fields kept for JS compatibility -->
-      <input type="hidden" id="cfg-install" value="10">
-      <input type="hidden" id="cfg-dod" value="1.25">
-      <input type="hidden" id="cfg-dod-la" value="2.0">
+      <!-- System configuration — factors from the AUDIT QUOTATION workbook -->
       <details open>
-      <summary style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span style="transition:transform .2s;display:inline-block">▸</span> Battery Capacity Parameters</summary>
-      <div class="form-group"><label class="form-label">Battery Type</label>
-        <select class="form-input" id="cfg-battery-type">
-          <option value="lithium">Lithium (LiFePO4)</option>
-          <option value="lead">Lead-Acid</option>
-        </select>
-      </div>
-      <div class="form-group"><label class="form-label">Battery Brand</label>
-        <select class="form-input" id="cfg-battery-brand">
-          <option value="Itel">Itel</option>
-          <option value="Sako">Sako</option>
-          <option value="Restar">Restar</option>
-          <option value="SMS">SMS</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Battery Voltage (V)</label>
-          <select class="form-input" id="cfg-batt-voltage">
-            <option value="12">12V</option>
-            <option value="24">24V</option>
-            <option value="48" selected>48V</option>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Individual Battery Capacity (Ah)</label>
-          <input type="number" class="form-input" id="cfg-indiv-batt-ah" value="200" min="1">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Depth of Discharge (DoD)</label>
-          <input type="number" class="form-input" id="cfg-batt-dod" value="0.80" min="0.1" max="1" step="0.05">
-        </div>
-        <div class="form-group"><label class="form-label">Battery Efficiency</label>
-          <input type="number" class="form-input" id="cfg-batt-eff" value="0.95" min="0.5" max="1" step="0.01">
-        </div>
+      <summary style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span style="transition:transform .2s;display:inline-block">▸</span> Battery Parameters</summary>
+      <div class="form-group"><label class="form-label">Default Battery Model</label>
+        <select class="form-input" id="cfg-default-battery"></select>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Ah, voltage and depth of discharge come from the model (edit them in Price Lists). Efficiency: lithium 90%, others 80%.</div>
       </div>
       <div class="form-group"><label class="form-label">Days of Autonomy</label>
-        <input type="number" class="form-input" id="cfg-days-autonomy" value="1" min="1" max="7">
+        <input type="number" class="form-input" id="cfg-days-autonomy" value="1" min="0.5" max="7" step="0.1">
       </div>
       </details>
       <div class="divider"></div>
       <details open>
       <summary style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span style="transition:transform .2s;display:inline-block">▸</span> Solar Panel Parameters</summary>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Solar Panel Brand</label>
-          <select class="form-input" id="cfg-panel-brand">
-            <option value="Jinko Solar">Jinko Solar</option>
-            <option value="Canadian Solar">Canadian Solar</option>
-            <option value="LONGi Solar">LONGi Solar</option>
-            <option value="Trina Solar">Trina Solar</option>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Individual Panel Capacity (W)</label>
-          <input type="number" class="form-input" id="cfg-panel-w" value="400" min="1">
-        </div>
+      <div class="form-group"><label class="form-label">Default Panel Model</label>
+        <select class="form-input" id="cfg-default-panel"></select>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Peak Sun Hours</label>
-          <input type="number" class="form-input" id="cfg-sun" value="4.5" min="1" max="12" step="0.5">
+          <input type="number" class="form-input" id="cfg-sun" value="5" min="1" max="12" step="0.5">
         </div>
-        <div class="form-group"><label class="form-label">Panel Derating (%)</label>
-          <input type="number" class="form-input" id="cfg-energy-used-pct" value="80" min="50" max="100" step="1" title="Share of nameplate output panels really deliver after heat, dust and wiring losses">
+        <div class="form-group"><label class="form-label">Panel Efficiency (%)</label>
+          <input type="number" class="form-input" id="cfg-energy-used-pct" value="80" min="50" max="100" step="1" title="Share of nameplate output panels really deliver">
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Charging Energy Loss (%)</label>
+          <input type="number" class="form-input" id="cfg-charge-loss" value="50" min="0" max="200" step="5" title="Extra solar to cover charging losses and daytime use">
+        </div>
+        <div class="form-group"><label class="form-label">System Loss (%)</label>
+          <input type="number" class="form-input" id="cfg-system-loss" value="20" min="0" max="100" step="1">
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:-4px;margin-bottom:8px">Panels = battery bank × (1 + charging loss) ÷ sun hours ÷ panel W ÷ panel efficiency, then fitted to the inverter's PV strings.</div>
       </details>
       <div class="divider"></div>
       <details open>
       <summary style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span style="transition:transform .2s;display:inline-block">▸</span> Inverter Parameters</summary>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Inverter Brand</label>
-          <select class="form-input" id="cfg-inv-brand">
-            <option value="Growatt">Growatt</option>
-            <option value="Itel">Itel</option>
-            <option value="SMS">SMS</option>
-            <option value="Sako">Sako</option>
-            <option value="Restar">Restar</option>
-          </select>
+        <div class="form-group"><label class="form-label">Preferred Inverter Brand</label>
+          <select class="form-input" id="cfg-inv-brand"></select>
         </div>
-        <div class="form-group"><label class="form-label">Inverter Voltage (V)</label>
-          <select class="form-input" id="cfg-inv-voltage">
-            <option value="12">12V</option>
-            <option value="24">24V</option>
-            <option value="48" selected>48V</option>
-          </select>
+        <div class="form-group"><label class="form-label">Power Factor</label>
+          <input type="number" class="form-input" id="cfg-power-factor" value="0.8" min="0.5" max="1" step="0.05">
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Inverter Efficiency Factor</label>
-          <input type="number" class="form-input" id="cfg-inv-eff" value="1.25" min="0.1" step="0.05">
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">Multiplier applied to Total Load</div>
-        </div>
-        <div class="form-group"><label class="form-label">Manual Override (kVA)</label>
-          <input type="number" class="form-input" id="cfg-selected-inv-kva" value="0" min="0" step="0.5">
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">0 = auto round-up to next standard size</div>
-        </div>
-      </div>
-      <div class="form-group"><label class="form-label">Standard Sizes (kVA, comma-separated)</label>
-        <input type="text" class="form-input" id="cfg-inv-std-sizes" value="1, 1.5, 2, 3, 5, 7.5, 10, 15, 20">
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">Calc'd kVA rounds up to the next size in this list</div>
-      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:-4px;margin-bottom:8px">New designs pick the cheapest model of this brand (or several in parallel) that passes every check. You can still choose a model on the design page.</div>
       </details>
       <div class="divider"></div>
       <details open>
-      <summary style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span style="transition:transform .2s;display:inline-block">▸</span> Balance of System Pricing</summary>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Each item can be a flat fee (set in Pricing tab) or scaled per unit. Scaled keeps small systems affordable.</div>
+      <summary style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span style="transition:transform .2s;display:inline-block">▸</span> Quote Pricing</summary>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Cabling Mode</label>
-          <select class="form-input" id="cfg-cabling-mode">
-            <option value="flat">Flat fee</option>
-            <option value="scaled">Scaled — per kVA</option>
-          </select>
+        <div class="form-group"><label class="form-label">Installation Fee (%)</label>
+          <input type="number" class="form-input" id="cfg-install" value="8" min="0" max="100" step="0.5">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Of inverter, panels and batteries</div>
         </div>
-        <div class="form-group"><label class="form-label">Cabling — <span id="lbl-cabling-unit">per kVA</span></label>
-          <input type="number" class="form-input" id="cfg-cabling-per-kva" value="15000" min="0" step="500">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Mounting Mode</label>
-          <select class="form-input" id="cfg-mounting-mode">
-            <option value="flat">Flat fee</option>
-            <option value="scaled">Scaled — per panel</option>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Mounting — <span id="lbl-mounting-unit">per panel</span></label>
-          <input type="number" class="form-input" id="cfg-mounting-per-panel" value="8000" min="0" step="500">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Accessories Mode</label>
-          <select class="form-input" id="cfg-accessories-mode">
-            <option value="flat">Flat fee</option>
-            <option value="scaled">Scaled — per kVA</option>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Accessories — <span id="lbl-accessories-unit">per kVA</span></label>
-          <input type="number" class="form-input" id="cfg-accessories-per-kva" value="8000" min="0" step="500">
+        <div class="form-group"><label class="form-label">Logistics (<span id="lbl-cfg-logistics-unit">NGN</span>)</label>
+          <input type="number" class="form-input" id="cfg-logistics" value="0" min="0" step="1000">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Default for new designs</div>
         </div>
       </div>
       </details>
@@ -1687,7 +1643,7 @@ html { touch-action: manipulation; }
       </div>
       <div class="viz-info-card">
         <div class="viz-info-label">Inverter</div>
-        <div class="viz-info-val" id="viz-inv" style="color:var(--yellow)">0 kVA</div>
+        <div class="viz-info-val" id="viz-inv" style="color:var(--yellow)">0 kW</div>
       </div>
     </div>
     <div class="viz-grid">
@@ -2009,11 +1965,16 @@ html { touch-action: manipulation; }
 // DATA MODELS
 // ============================================================
 const DEFAULT_APPLIANCES = [
-  { id:'ac1hp',   name:'AC (1hp)',         watts:750,  icon:'❄️', defaultHours:6  },
-  { id:'ac15hp',  name:'AC (1.5hp)',       watts:1250, icon:'❄️', defaultHours:6  },
-  { id:'ac2hp',   name:'AC (2hp)',         watts:1500, icon:'❄️', defaultHours:6  },
+  // ACs: horsepower × 746 W; inverter ACs draw ~40% of that (workbook AUDITING rows 4–6)
+  { id:'ac1hp',   name:'AC (1hp)',         watts:746,  icon:'❄️', defaultHours:6  },
+  { id:'ac15hp',  name:'AC (1.5hp)',       watts:1119, icon:'❄️', defaultHours:6  },
+  { id:'ac2hp',   name:'AC (2hp)',         watts:1492, icon:'❄️', defaultHours:6  },
+  { id:'invac1hp',  name:'Inverter AC (1hp)',   watts:298, icon:'❄️', defaultHours:8 },
+  { id:'invac15hp', name:'Inverter AC (1.5hp)', watts:448, icon:'❄️', defaultHours:8 },
   { id:'fridge',  name:'Fridge / Freezer', watts:150,  icon:'🧊', defaultHours:24 },
   { id:'tv',      name:'TV',               watts:100,  icon:'📺', defaultHours:6  },
+  { id:'decoder', name:'Decoder',          watts:20,   icon:'📡', defaultHours:24 },
+  { id:'cctv',    name:'CCTV',             watts:100,  icon:'📹', defaultHours:24 },
   { id:'fan',     name:'Fan',              watts:100,  icon:'💨', defaultHours:8  },
   { id:'laptop',  name:'Laptop',           watts:65,   icon:'💻', defaultHours:6  },
   { id:'light',   name:'LED Light',        watts:15,   icon:'💡', defaultHours:6  },
@@ -2046,9 +2007,18 @@ const DEFAULT_PRICES = {
   }
 };
 
+// Bump when DEFAULT_CONFIG defaults change in a way saved settings should follow
+const CONFIG_VERSION = 2;
 const DEFAULT_CONFIG = {
-  sunHours: 4.5,
-  installPct: 0.10,
+  // ── Workbook (AUDITING sheet) factors ──
+  sunHours: 5,                 // peak sun hours (E39)
+  systemLoss: 0.20,            // added to daily energy (E31)
+  chargeLoss: 0.50,            // energy lost while charging incl. daytime use (E38)
+  powerFactor: 0.80,           // inverter sizing (E42)
+  installPct: 0.08,            // installation fee, % of inverter + panels + batteries (D98)
+  logistics: 0,                // flat logistics charge per quote (NGN)
+  defaultBatteryId: 'itb200',  // catalog ids used for new designs
+  defaultPanelId: 'jk615',
   dodLithium: 1.25,
   dodLead: 2.0,
   battVoltage: 48,
@@ -2057,7 +2027,7 @@ const DEFAULT_CONFIG = {
   individualBattAh: 200,
   individualPanelW: 400,
   energyUsedPct: 0.90,
-  panelDerate: 0.80,           // real panel output vs nameplate (heat, dust, wiring)
+  panelDerate: 0.80,           // panel efficiency: real output vs nameplate (E41)
   inverterEfficiency: 1.25,
   selectedInverterKVA: 0,                                    // 0 = auto round-up
   inverterStandardSizes: [1, 1.5, 2, 3, 5, 7.5, 10, 15, 20], // standard kVA sizes
@@ -2068,7 +2038,7 @@ const DEFAULT_CONFIG = {
   panelBrand: 'Jinko Solar',
   inverterBrand: 'Growatt',
   invBrand: 'Growatt',
-  markup: 20,
+  markup: 0,                   // catalog user prices already include margin
   // Balance of System pricing modes — 'flat' or 'scaled'
   cablingMode: 'flat',         cablingPerKVA: 15000,
   mountingMode: 'flat',        mountingPerPanel: 8000,
@@ -2099,6 +2069,7 @@ let state = {
   company: { ...DEFAULT_COMPANY },
   activePriceTab: 'user',
   catalog: null,  // null = use DEFAULT_CATALOG
+  design: {},     // New Design model picks: { inverterId, invUnits, batteryId, panelId }
 };
 // ============================================================
 // INIT APPLIANCES — ensures state.appliances has a valid
@@ -2172,7 +2143,14 @@ function loadFromStorage() {
       }
       state.customAppliances  = parsed.customAppliances  || [];
       state.activePriceTab    = parsed.activePriceTab    || 'user';
-      state.catalog           = parsed.catalog           || null;
+      // Catalogs saved before the workbook price lists lack model specs — start from the new list
+      state.catalog           = parsed.catalogVersion === CATALOG_VERSION ? (parsed.catalog || null) : null;
+      if (parsed.configVersion !== CONFIG_VERSION) {
+        // Move untouched old defaults to the workbook's values
+        if (state.config.sunHours === 4.5)   state.config.sunHours = DEFAULT_CONFIG.sunHours;
+        if (state.config.installPct === 0.10 || state.config.installPct === 0.12) state.config.installPct = DEFAULT_CONFIG.installPct;
+        if (state.config.markup === 20)      state.config.markup = DEFAULT_CONFIG.markup;
+      }
       // Ensure voltage values are numbers, not strings (#10)
       state.config.battVoltage    = Number(state.config.battVoltage)    || 48;
       state.config.inverterVoltage = Number(state.config.inverterVoltage) || 48;
@@ -2194,6 +2172,8 @@ function saveToStorage() {
     customAppliances: state.customAppliances || [],
     activePriceTab:   state.activePriceTab   || 'user',
     catalog:          state.catalog,
+    catalogVersion:   CATALOG_VERSION,
+    configVersion:    CONFIG_VERSION,
   }));
 }
 
@@ -2627,125 +2607,124 @@ function calculateTotalsWithCustom() {
   return { totalLoad, totalEnergy, deviceRows };
 }
 
+// Model choices for the design being edited ('auto' = let the engine pick the inverter)
+function getDesignChoice() {
+  const d = state.design || {};
+  const cfg = state.config;
+  return {
+    inverterId: d.inverterId || 'auto',
+    invUnits:   Number(d.invUnits) || 0,
+    batteryId:  d.batteryId || cfg.defaultBatteryId || 'itb200',
+    panelId:    d.panelId   || cfg.defaultPanelId   || 'jk615',
+  };
+}
+
+// Installation % and logistics: the New Design fields win, else Settings
+function designInstallPct() {
+  const el = document.getElementById('install-pct');
+  const v = el ? parseFloat(el.value) : NaN;
+  return isNaN(v) ? (state.config.installPct ?? 0.08) : v / 100;
+}
+function designLogistics() {
+  const el = document.getElementById('logistics-amt');
+  const v = el ? parseFloat(el.value) : NaN;
+  return isNaN(v) ? (state.config.logistics || 0) : v / (getActiveCurrency().rate || 1);
+}
+
 // ============================================================
-// CALCULATION ENGINE
+// CALCULATION ENGINE — sizing follows the AUDIT QUOTATION workbook (sizing-engine.js)
 // ============================================================
 function calcSystem(appliances, opts) {
-  const cfg        = state.config;
-  const batteryType = opts.batteryType || 'lithium';
-  const markup      = (opts.markup || 0) / 100;
-  const prices      = (state.prices && state.prices.user) ? state.prices.user : DEFAULT_PRICES.user;
-
-  // ── Step 1: Load & Energy ──────────────────────────────────
+  opts = opts || {};
+  const cfg = state.config;
   const totals = calculateTotalsWithCustom();
   if (!totals) return null;
   const totalLoad     = totals.totalLoad;
-  const deviceRows    = totals.deviceRows;
+  const totalEnergyWh = totals.totalEnergy > 0 ? totals.totalEnergy : totalLoad * (opts.usageHours || 8);
+  const catalog = getCatalog();
+  const choice  = Object.assign(getDesignChoice(), opts.design || {});
 
-  // Daily energy — use per-device hours (from state) if available,
-  // fall back to usageHours param for simpler audits
-  const usageHours    = opts.usageHours || 8;
-  const totalEnergyWh = totals.totalEnergy > 0
-    ? totals.totalEnergy                       // per-device hours set
-    : totalLoad * usageHours;                  // flat hours fallback
-  const dailyKWh      = totalEnergyWh / 1000;
-  const totalEnergyKWh = dailyKWh;
+  // Good / Better / Best ask for a battery chemistry — swap to a matching model if needed
+  if (opts.batteryType) {
+    const cur = SIQSizing.findItem(catalog, 'batteries', choice.batteryId);
+    const wantLithium = opts.batteryType === 'lithium';
+    if (!cur || (cur.chem === 'lithium') !== wantLithium) {
+      const dflt = SIQSizing.findItem(catalog, 'batteries', cfg.defaultBatteryId);
+      const pool = SIQSizing.flat(catalog, 'batteries').filter(b => (b.chem === 'lithium') === wantLithium && b.userPrice > 0);
+      choice.batteryId = (dflt && (dflt.chem === 'lithium') === wantLithium) ? dflt.id
+        : ((pool.find(b => b.ah >= 200) || pool[0] || {}).id);
+    }
+  }
 
-  // ── Step 2: System losses (+20%) ───────────────────────────
-  const adjustedEnergyWh  = totalEnergyWh * 1.20;
-  const adjustedEnergyKWh = adjustedEnergyWh / 1000;
+  const days = opts.backupDays || cfg.daysOfAutonomy || 1;
+  const markupPct = (opts.markup != null ? Number(opts.markup) || 0 : (cfg.markup || 0)) / 100;
+  const d = SIQSizing.size({
+    loadW: totalLoad, energyWh: totalEnergyWh, catalog, priceField: 'userPrice',
+    inverterId: choice.inverterId, inverterBrand: cfg.invBrand || cfg.inverterBrand,
+    invUnits: choice.invUnits, batteryId: choice.batteryId, panelId: choice.panelId,
+    cfg: {
+      systemLoss: cfg.systemLoss ?? 0.20, daysOfAutonomy: days, sunHours: cfg.sunHours || 5,
+      chargeLoss: cfg.chargeLoss ?? 0.50, panelEff: cfg.panelDerate || 0.80, powerFactor: cfg.powerFactor || 0.80,
+      installPct: designInstallPct(), logistics: designLogistics(), markupPct,
+    },
+  });
 
-  // ── Step 3: Battery chain ──────────────────────────────────
-  const dod        = batteryType === 'lithium' ? cfg.dodLithium : cfg.dodLead;
-  const backupDays = opts.backupDays || cfg.daysOfAutonomy || 1;
-  const batteryKWh = Math.ceil(adjustedEnergyKWh * backupDays * dod * 10) / 10;
-
-  // Usable depth of discharge: lithium uses the DoD setting, lead-acid only 1/dodLead (≈50%)
-  const usableDod         = batteryType === 'lithium' ? (cfg.battDod||0.8) : 1 / (cfg.dodLead||2.0);
-  const battCapacityAh    = (adjustedEnergyWh / ((cfg.battVoltage||48) * usableDod * (cfg.battEfficiency||0.95))) * backupDays;
-  const battRuntimeHrs    = backupDays * 24;
-
-  // Total batteries = ceil(battCapacityAh / individual Ah), then round per voltage rules
-  const rawBatteries  = Math.ceil(battCapacityAh / (cfg.individualBattAh || 200));
-  const bVolt = cfg.battVoltage || 48;
-  const iVolt = cfg.inverterVoltage || 48;
-  let totalBatteries = rawBatteries;
-  // Voltage-matching rounding rules
-  if (bVolt === 12 && iVolt === 12)      totalBatteries = Math.ceil(rawBatteries);          // nearest whole
-  else if (bVolt === 12 && iVolt === 24) totalBatteries = Math.ceil(rawBatteries / 2) * 2;  // nearest even
-  else if (bVolt === 12 && iVolt === 48) totalBatteries = Math.ceil(rawBatteries / 4) * 4;  // nearest ×4
-  else if (bVolt === 24 && iVolt === 24) totalBatteries = Math.ceil(rawBatteries);          // nearest whole
-  else if (bVolt === 48 && iVolt === 48) totalBatteries = Math.ceil(rawBatteries);          // nearest whole
-  else totalBatteries = Math.ceil(rawBatteries);  // fallback: round up
-
-  // Recalculate battery Wh based on ACTUAL installed battery count
-  const battCapacityWh    = totalBatteries * (cfg.individualBattAh || 200) * bVolt;
-  const totalBattEnergyWh = battCapacityWh;
-
-  // ── Step 4: Solar panels ───────────────────────────────────
-  // Array must refill one day's adjusted demand in the peak sun hours,
-  // then oversize for heat, dust and wiring losses (panel derating)
-  const solarPowerW    = adjustedEnergyWh / (cfg.sunHours || 4.5);
-  const adjustedPanelW = solarPowerW / (cfg.panelDerate || 0.80);
-  const numPanels      = Math.ceil(adjustedPanelW / (cfg.individualPanelW || 400));
-  const panelW         = numPanels * (cfg.individualPanelW || 400);
-
-  // ── Step 5: Inverter ───────────────────────────────────────
-  const inverterSizeW = totalLoad * (cfg.inverterEfficiency || 1.25);
-  const inverterKVA   = Math.ceil((inverterSizeW / 0.8) / 1000 * 10) / 10;
-
-  const stdSizes = (cfg.inverterStandardSizes?.length)
-    ? cfg.inverterStandardSizes : [1, 1.5, 2, 3, 5, 7.5, 10, 15, 20];
-  const selectedInverterKVA = (cfg.selectedInverterKVA > 0)
-    ? cfg.selectedInverterKVA
-    : (stdSizes.find(s => s >= inverterKVA) ?? stdSizes[stdSizes.length - 1]);
-
-  // ── Step 6: Cost ───────────────────────────────────────────
-  const batteryPrice  = batteryType === 'lithium' ? prices.batteryLithiumPerKWh : prices.batteryLeadPerKWh;
-  const installedBattKWh = (totalBatteries * (cfg.individualBattAh||200) * (cfg.battVoltage||48)) / 1000;
-  const cPanels      = panelW * prices.panelPerWatt;
-  const cBattery     = installedBattKWh * batteryPrice;
-  const invQtyCalc   = (() => { const el = document.getElementById('inv-qty'); return el ? (parseInt(el.value)||1) : 1; })();
-  const cInverter    = selectedInverterKVA * prices.inverterPerKVA * invQtyCalc;
-  const cCabling     = cfg.cablingMode === 'scaled' ? selectedInverterKVA * (cfg.cablingPerKVA||0) : prices.cabling;
-  const cMounting    = cfg.mountingMode === 'scaled' ? numPanels * (cfg.mountingPerPanel||0) : prices.mounting;
-  // Accessories = ⅓ of (panels + battery + inverter)
-  const cAccessories = Math.round((cPanels + cBattery + cInverter) / 3);
-  const equipTotal   = cPanels + cBattery + cInverter + cCabling + cMounting + cAccessories;
-  // Installation %: read from editable field if on page, else use config
-  const installPctInput = document.getElementById('install-pct');
-  const installPct = installPctInput
-    ? (parseFloat(installPctInput.value) || 10) / 100
-    : (cfg.installPct || 0.10);
-  const cInstall     = equipTotal * installPct;
-  const subtotal     = equipTotal + cInstall;
-  const markupAmt    = subtotal * markup;
-  const total        = subtotal + markupAmt;
-  // Nothing to power yet — don't price a system
-  const empty        = totalLoad <= 0;
-
-  // ── Return all results ─────────────────────────────────────
-  const z = v => empty ? 0 : v;
+  const bankKWh = d.bankWh / 1000;
   return {
-    empty,
-    totalLoad, totalEnergyWh, totalEnergyKWh, dailyKWh,
-    adjustedEnergyWh, adjustedEnergyKWh,
-    panelW, batteryKWh: Math.round(installedBattKWh * 10) / 10, installedBattKWh,
-    battCapacityAh, battCapacityWh, battRuntimeHrs: z(battRuntimeHrs),
-    totalBatteries, totalBattEnergyWh, solarPowerW, adjustedPanelW, numPanels,
-    inverterSizeW, inverterKVA, selectedInverterKVA: z(selectedInverterKVA),
-    deviceRows,
-    cPanels, cBattery, cInverter: z(cInverter), cCabling: z(cCabling), cMounting: z(cMounting), cAccessories: z(cAccessories),
-    equipTotal: z(equipTotal), cInstall: z(cInstall), markupAmt: z(markupAmt), total: z(total)
+    empty: d.empty,
+    totalLoad, totalEnergyWh, totalEnergyKWh: totalEnergyWh / 1000, dailyKWh: totalEnergyWh / 1000,
+    adjustedEnergyWh: d.adjustedEnergyWh, adjustedEnergyKWh: d.adjustedEnergyWh / 1000,
+    panelW: d.panelW, batteryKWh: Math.round(bankKWh * 10) / 10, installedBattKWh: bankKWh,
+    battCapacityAh: d.battAhNeeded, battCapacityWh: d.bankWh, battRuntimeHrs: d.empty ? 0 : days * 24,
+    totalBatteries: d.batteries, totalBattEnergyWh: d.bankWh,
+    solarPowerW: d.solarNeededW, adjustedPanelW: d.panelsNeeded * (d.panel ? d.panel.watt : 0), numPanels: d.numPanels,
+    inverterSizeW: totalLoad / (cfg.powerFactor || 0.80) / d.invEff, inverterKVA: d.requiredKW,
+    selectedInverterKVA: (d.empty || !d.inverter) ? 0 : d.inverter.kw * d.units,   // kW installed (model kW × units)
+    deviceRows: totals.deviceRows,
+    cPanels: d.cPanels, cBattery: d.cBattery, cInverter: d.cInverter, cCabling: 0, cMounting: 0,
+    cAccessories: d.cAccessories, equipTotal: d.cPanels + d.cBattery + d.cInverter + d.cAccessories,
+    cInstall: d.cInstall, cLogistics: d.cLogistics, markupAmt: d.markupAmt, total: d.total,
+    installPct: d.cfg.installPct, backupDays: days,
+    // Workbook detail: chosen models, strings, checks and the accessories list
+    inverter: d.inverter, invUnits: d.units, battery: d.battery, panel: d.panel, autoSelected: d.autoSelected,
+    systemVoltage: d.systemVoltage, batterySeries: d.batterySeries, batteryStrings: d.batteryStrings,
+    pvStrings: d.pvStrings, panelsPerString: d.panelsPerString, panelsNeeded: d.panelsNeeded,
+    requiredKWRounded: d.requiredKWRounded, dailySolarWh: d.dailySolarWh,
+    checks: d.checks, ready: d.ready, bom: d.bom,
   };
+}
+
+// Model pickers on the New Design page
+function onDesignChoice(field, value) {
+  state.design = state.design || {};
+  state.design[field] = field === 'invUnits' ? (parseInt(value) || 0) : value;
+  recalculate();
+}
+
+function fillEquipmentSelects(r) {
+  const catalog = getCatalog();
+  const choice = getDesignChoice();
+  const opt = (it, sel) => `<option value="${it.id}"${it.id === sel ? ' selected' : ''}>${it.label}</option>`;
+  const groups = (tab, sel) => (catalog[tab] || []).map(b =>
+    `<optgroup label="${b.brand}">${b.items.map(it => opt(it, sel)).join('')}</optgroup>`).join('');
+  const fill = (id, html, value) => {
+    const el = document.getElementById(id);
+    if (!el || document.activeElement === el) return;
+    if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+    el.value = value;
+  };
+  const autoLabel = r && r.autoSelected && r.inverter
+    ? `Auto — ${r.inverter.label}${r.invUnits > 1 ? ' × ' + r.invUnits : ''}` : 'Auto (cheapest that passes the checks)';
+  fill('sel-inverter', `<option value="auto">${autoLabel}</option>` + groups('inverters', choice.inverterId), choice.inverterId);
+  fill('sel-panel', groups('panels', choice.panelId), choice.panelId);
+  fill('sel-battery', groups('batteries', choice.batteryId), choice.batteryId);
+  const q = document.getElementById('inv-qty');
+  if (q && document.activeElement !== q) q.value = choice.invUnits || '';
 }
 
 function recalculate() {
   try {
-  const opts = {
-    batteryType: document.getElementById('battery-type')?.value||'lithium',
-    markup: parseFloat(document.getElementById('markup')?.value)||0
-  };
+  const opts = { markup: parseFloat(document.getElementById('markup')?.value) || 0 };
   const r = calcSystem(state.appliances, opts);
 
   // Safety check — calcSystem returns null if calculateTotals fails
@@ -2770,56 +2749,54 @@ function recalculate() {
 
   // Update calc panel — null-safe helper prevents silent crashes
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  const inv = r.inverter, bat = r.battery, pan = r.panel;
+  const sysV = r.systemVoltage || 48;
 
+  fillEquipmentSelects(r);
   set('calc-load',            fmt(r.totalLoad) + ' W');
   set('calc-daily',           r.dailyKWh.toFixed(2) + ' kWh (' + fmt(r.totalEnergyWh) + ' Wh)');
   set('calc-adjusted',        r.adjustedEnergyKWh.toFixed(2) + ' kWh (' + fmt(r.adjustedEnergyWh) + ' Wh)');
-  set('calc-batt-ah',         Math.ceil(r.battCapacityAh) + ' Ah @ ' + (state.config.battVoltage||48) + 'V');
+  set('calc-batt-ah',         Math.ceil(r.battCapacityAh) + ' Ah @ ' + sysV + 'V');
   set('calc-batt-wh',         fmt(Math.round(r.battCapacityWh)) + ' Wh (' + (r.battCapacityWh/1000).toFixed(2) + ' kWh)');
-  set('calc-total-batt-energy', fmt(Math.round(r.totalBattEnergyWh)) + ' Wh (' + (r.totalBattEnergyWh/1000).toFixed(2) + ' kWh)');
+  set('calc-total-batt-energy', fmt(Math.round(r.dailySolarWh || 0)) + ' Wh (' + ((r.dailySolarWh || 0)/1000).toFixed(2) + ' kWh)');
   set('calc-solar-power',     fmt(Math.round(r.solarPowerW)) + ' W (' + (r.solarPowerW/1000).toFixed(2) + ' kW)');
-  set('calc-adj-panel',       fmt(Math.round(r.adjustedPanelW)) + ' W (' + (r.adjustedPanelW/1000).toFixed(2) + ' kW)');
-  set('calc-num-panels',      r.numPanels + ' panels (' + (state.config.individualPanelW||400) + 'W each)');
+  set('calc-adj-panel',       (r.panelsNeeded || 0) + ' panels (' + (pan ? pan.watt : 0) + 'W each)');
+  set('calc-num-panels',      r.numPanels + ' panels · ' + fmt(r.panelW) + ' W');
+  set('calc-panel-strings-label', r.numPanels ? `${r.pvStrings} string${r.pvStrings > 1 ? 's' : ''} × ${r.panelsPerString} panels${r.invUnits > 1 ? ' × ' + r.invUnits + ' inverters' : ''}` : 'Fitted to inverter strings');
   set('calc-batt-runtime',    Math.round(r.battRuntimeHrs).toLocaleString() + ' hrs');
-  set('calc-total-batts',     r.totalBatteries > 0 ? r.totalBatteries + ' batteries (' + (state.config.individualBattAh||200) + 'Ah each)' : '—');
-  // Battery voltage beside total batteries label
+  set('calc-total-batts',     r.totalBatteries > 0 ? r.totalBatteries + ' × ' + (bat ? bat.ah + 'Ah ' + bat.volt + 'V' : '') : '—');
   const bvl = document.getElementById('calc-batt-voltage-label');
-  if (bvl) bvl.textContent = 'Capacity ÷ individual Ah · ' + (state.config.battVoltage||48) + 'V';
+  if (bvl) bvl.textContent = r.batterySeries > 1
+    ? `${r.batteryStrings} strings × ${r.batterySeries} in series · ${sysV}V`
+    : `Capacity ÷ battery Ah · ${sysV}V`;
   set('calc-inverter-w',      fmt(Math.round(r.inverterSizeW)) + ' W');
-  set('calc-inverter',        (r.inverterKVA * 0.8).toFixed(2) + ' kW @ ' + (state.config.inverterVoltage||48) + 'V');
-  set('calc-selected-inv',    ((r.selectedInverterKVA||0) * 0.8).toFixed(1) + ' kW @ ' + (state.config.inverterVoltage||48) + 'V');
+  set('calc-inverter',        (r.requiredKWRounded || 0) + ' kW');
+  set('calc-selected-inv',    inv ? `${r.selectedInverterKVA} kW @ ${inv.volt}V` : '—');
+  set('calc-selected-inv-label', inv ? `${inv.label}${r.invUnits > 1 ? ' × ' + r.invUnits : ''}` : 'Model × units');
+
   // Equipment breakdown items
-  const cfg = state.config;
-  const invBrand    = cfg.invBrand      || cfg.inverterBrand || 'Growatt';
-  const panelBrand  = cfg.panelBrand    || 'Jinko Solar';
-  const battBrand   = cfg.batteryBrand  || 'Itel';
-  const battType    = cfg.batteryType   || 'lithium';
-  const battLabel   = battType === 'lithium' ? 'Lithium' : 'Lead-Acid';
-  const invVolt     = cfg.inverterVoltage || 48;
+  set('calc-inv-desc',       inv ? `${inv.kw} kW · ${inv.volt}V · ${inv.phase === 3 ? '3-phase' : '1-phase'}` : '—');
+  set('calc-inv-unit-price', r.invUnits ? `${fmtCur(r.cInverter / r.invUnits)} × ${r.invUnits}` : '—');
+  set('calc-inv-price',      fmtCur(r.cInverter));
 
-  // Editable inverter qty
-  const invQtyEl  = document.getElementById('inv-qty');
-  const invQty    = invQtyEl ? (parseInt(invQtyEl.value) || 1) : 1;
-  // r.cInverter already covers every inverter
-  const invTotalPrice = r.cInverter;
-  const invUnitPrice = invTotalPrice / invQty;
-
-  set('calc-inv-desc',       `${((r.selectedInverterKVA||0) * 0.8).toFixed(1)} kW · ${invVolt}V · ${invBrand}`);
-  set('calc-inv-unit-price', `${fmtCur(invUnitPrice)} × ${invQty}`);
-  set('calc-inv-price',      fmtCur(invTotalPrice));
-
-  set('calc-panel-desc',      `${panelBrand} · ${cfg.individualPanelW||400}W each`);
+  set('calc-panel-desc',      pan ? `${pan.brand} · ${pan.watt}W each` : '—');
   set('calc-panel-qty',       `${r.numPanels||0} panels`);
   set('calc-panel-unit-price', r.numPanels > 0 ? `${fmtCur(r.cPanels / r.numPanels)} × ${r.numPanels}` : '—');
   set('calc-panel-price',     fmtCur(r.cPanels));
 
-  set('calc-batt-desc',       `${battBrand} ${battLabel} · ${cfg.individualBattAh||200}Ah ${cfg.battVoltage||48}V`);
+  set('calc-batt-desc',       bat ? `${bat.brand} · ${bat.ah}Ah ${bat.volt}V · DoD ${Math.round((bat.dod||0.8)*100)}%` : '—');
   set('calc-batt-qty',        `${r.totalBatteries||0} units`);
   set('calc-batt-unit-price', r.totalBatteries > 0 ? `${fmtCur(r.cBattery / r.totalBatteries)} × ${r.totalBatteries}` : '—');
   set('calc-batt-price',      fmtCur(r.cBattery));
 
   set('calc-accessories',    fmtCur(r.cAccessories));
+  const bomEl = document.getElementById('calc-bom');
+  if (bomEl) bomEl.innerHTML = (r.bom || []).length
+    ? r.bom.map(l => `<div class="bom-row"><span>${l.label}${l.note ? ' · ' + l.note : ''}</span><b>${l.qty} × ${fmtCur(l.unit)} = ${fmtCur(l.total)}</b></div>`).join('')
+    : '<div class="bom-row"><span>Add appliances to build the accessories list.</span></div>';
   set('calc-install',        fmtCur(r.cInstall));
+  set('calc-logistics',      fmtCur(r.cLogistics || 0));
+  set('lbl-logistics-unit',  'flat · ' + getActiveCurrency().code);
   set('calc-total',          fmtCur(r.total));
 
   // Compatibility check — only when on new-audit page
@@ -2830,13 +2807,13 @@ function recalculate() {
     runCompatibilityCheck(r);
   }
 
-  // Final Audit Report card — kW units, add inverter voltage
-  set('rep-inverter-calc', fmt(Math.round(r.inverterSizeW||0)) + ' W | ' + (r.inverterKVA * 0.8).toFixed(2) + ' kW');
-  set('rep-inverter-sel',  ((r.selectedInverterKVA||0) * 0.8).toFixed(1) + ' kW · ' + (state.config.inverterVoltage||48) + 'V');
+  // Final Audit Report card
+  set('rep-inverter-calc', fmt(Math.round(r.inverterSizeW||0)) + ' W | ' + (r.requiredKWRounded||0) + ' kW');
+  set('rep-inverter-sel',  inv ? `${inv.label}${r.invUnits > 1 ? ' × ' + r.invUnits : ''}` : '—');
   set('rep-battery-calc',  fmt(Math.round(r.totalBattEnergyWh||0)) + ' Wh | ' + Math.ceil(r.battCapacityAh||0) + ' Ah');
-  set('rep-battery-sel',   (r.totalBatteries||0) + ' batteries');
-  set('rep-solar-calc',    fmt(Math.round(r.solarPowerW||0)) + ' W | ' + fmt(Math.round(r.adjustedPanelW||0)) + ' W adj.');
-  set('rep-solar-sel',     (r.numPanels||0) + ' panels');
+  set('rep-battery-sel',   (r.totalBatteries||0) + ' × ' + (bat ? bat.label : 'batteries'));
+  set('rep-solar-calc',    fmt(Math.round(r.solarPowerW||0)) + ' W | ' + (r.panelsNeeded||0) + ' panels needed');
+  set('rep-solar-sel',     (r.numPanels||0) + ' × ' + (pan ? pan.watt + 'W' : 'panels'));
   } catch(e) { console.error('recalculate error:', e); }
 }
 
@@ -2862,7 +2839,7 @@ async function saveAudit() {
     fuelPrice: parseFloat(document.getElementById('sc-fuel-price')?.value) || 0,
   };
 
-  const opts = { batteryType, markup };
+  const opts = { markup };   // battery comes from the design's model pick
   const r = calcSystem(state.appliances, opts);
 
   const audit = {
@@ -2873,6 +2850,7 @@ async function saveAudit() {
     appliances: JSON.parse(JSON.stringify(state.appliances)),
     customAppliances: JSON.parse(JSON.stringify(state.customAppliances || [])),
     savingsInputs,
+    design: getDesignChoice(),
     result: r
   };
 
@@ -2916,6 +2894,24 @@ async function generateQuote(auditOverride) {
   window._currentQuote = quote;
 }
 
+// Escape text for use inside HTML
+function escHTML(s) {
+  return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+}
+
+// Plain-language names for the main equipment on quotes (falls back for designs saved before models)
+function quoteEquipment(r, audit) {
+  const inv = r.inverter, bat = r.battery, pan = r.panel;
+  const units = r.invUnits || 1;
+  return {
+    inverter: inv ? `${inv.label}${units > 1 ? ' × ' + units + ' (parallel)' : ''}` : `${(r.selectedInverterKVA||0).toFixed(1)} kVA ${audit.inverterBrand || ''}`.trim(),
+    battery:  bat ? `${r.totalBatteries || 0} × ${bat.label}` : `${r.totalBatteries || 0} × ${state.config.individualBattAh || 200}Ah`,
+    panels:   pan ? `${r.numPanels || 0} × ${pan.label}` : `${r.numPanels || 0} panels (${audit.panelBrand || ''})`,
+    battType: bat ? ({ lithium:'Lithium', agm:'AGM', gel:'Gel', tubular:'Tubular' }[bat.chem] || 'Battery') : (audit.batteryType === 'lithium' ? 'Lithium LiFePO4' : 'Lead-Acid'),
+    sysV:     r.systemVoltage || state.config.battVoltage || 48,
+  };
+}
+
 // Renders quote HTML fresh every time — always uses current currency
 function renderQuoteHTML(quote) {
   const audit = quote._auditSnapshot
@@ -2928,17 +2924,31 @@ function renderQuoteHTML(quote) {
   const c   = n => fmtCur(n || 0);
   const qId = quote.id;
   const dateStr = new Date(quote.createdAt).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+  const eq = quoteEquipment(r, audit);
+  const units = r.invUnits || 1;
+  const installPct = r.installPct != null ? r.installPct : (state.config.installPct ?? 0.08);
+  const bom = r.bom || [];
+  const td = 'style="text-align:right"';
+
+  const costRows = [
+    [`Inverter — ${escHTML(eq.inverter)}`, r.cInverter],
+    [`Solar Panels — ${escHTML(eq.panels)}`, r.cPanels],
+    [`Batteries — ${escHTML(eq.battery)}`, r.cBattery],
+  ].map(([l, v]) => `<tr><td>${l}</td><td ${td}>${c(v)}</td></tr>`).join('');
+  const bomRows = bom.length
+    ? bom.map(l => `<tr style="font-size:11.5px;color:#6b7280"><td style="padding-left:22px">${escHTML(l.label)}${l.note ? ' · ' + escHTML(l.note) : ''} — ${l.qty} × ${c(l.unit)}</td><td ${td}>${c(l.total)}</td></tr>`).join('')
+    : (r.cCabling || r.cMounting ? `<tr><td>Cabling &amp; Wiring</td><td ${td}>${c(r.cCabling)}</td></tr><tr><td>Mounting Structure</td><td ${td}>${c(r.cMounting)}</td></tr>` : '');
 
   return `
   <div class="quote-preview" id="quote-print-area">
     <div class="quote-header">
       <div>
-        <div class="quote-logo">&#9889; ${co.name}<span>${co.address}</span></div>
-        <div style="font-size:12px;color:#6b7280;margin-top:6px">${[co.phone, co.email].filter(Boolean).join(' &middot; ')}</div>
+        <div class="quote-logo">&#9889; ${escHTML(co.name)}<span>${escHTML(co.address)}</span></div>
+        <div style="font-size:12px;color:#6b7280;margin-top:6px">${[co.phone, co.email].filter(Boolean).map(escHTML).join(' &middot; ')}</div>
       </div>
       <div class="quote-meta">
         <strong style="color:#111;font-size:14px">QUOTATION</strong><br>
-        Ref: ${qId}<br>
+        Ref: ${escHTML(qId)}<br>
         Date: ${dateStr}<br>
         Currency: ${cur.code} (${cur.symbol})<br>
         Valid: 30 days
@@ -2946,45 +2956,36 @@ function renderQuoteHTML(quote) {
     </div>
     <div class="quote-client">
       <div class="quote-section-title">Prepared For</div>
-      <div class="quote-client-name">${audit.clientName || '&#8212;'}</div>
-      <div class="quote-client-detail">${[audit.clientPhone, audit.location, audit.propertyType].filter(Boolean).join(' &middot; ')}</div>
+      <div class="quote-client-name">${escHTML(audit.clientName) || '&#8212;'}</div>
+      <div class="quote-client-detail">${[audit.clientPhone, audit.location, audit.propertyType].filter(Boolean).map(escHTML).join(' &middot; ')}</div>
     </div>
     <div class="quote-section-title">System Specification</div>
     <table class="quote-table" style="margin-bottom:20px">
       <tr><th>Parameter</th><th>Value</th></tr>
       <tr><td>Total Load</td><td><strong>${fmt(r.totalLoad)} W</strong></td></tr>
       <tr><td>Total Energy Demand</td><td>${fmt(r.totalEnergyWh)} Wh / ${(r.totalEnergyKWh||0).toFixed(2)} kWh</td></tr>
-      <tr style="background:#fff7ed"><td><strong>Adjusted Energy Demand</strong><br><span style="font-size:11px;color:#9ca3af">+20% system losses</span></td><td><strong>${fmt(r.adjustedEnergyWh||0)} Wh / ${(r.adjustedEnergyKWh||0).toFixed(2)} kWh</strong></td></tr>
-      <tr><td>Solar Panel Capacity</td><td><strong>${fmt(r.panelW)} W (${audit.panelBrand||''})</strong></td></tr>
-      <tr><td>Battery Bank</td><td><strong>${(r.batteryKWh||0).toFixed(1)} kWh (${audit.batteryType==='lithium'?'Lithium LiFePO4':'Lead-Acid'})</strong></td></tr>
-      <tr><td>Battery Capacity</td><td><strong>${Math.ceil(r.battCapacityAh||0)} Ah @ ${state.config.battVoltage||48}V</strong></td></tr>
-      <tr><td>Battery Capacity (Wh)</td><td><strong>${fmt(r.battCapacityWh||0)} Wh / ${((r.battCapacityWh||0)/1000).toFixed(2)} kWh</strong></td></tr>
-      <tr><td>Battery Runtime</td><td><strong>${Math.round(r.battRuntimeHrs||0)} hrs</strong></td></tr>
-      <tr><td>Total Batteries Required</td><td><strong>${r.totalBatteries||0} x ${state.config.individualBattAh||200}Ah</strong></td></tr>
-      <tr><td>Total Battery Bank Energy</td><td><strong>${fmt(r.totalBattEnergyWh||0)} Wh / ${((r.totalBattEnergyWh||0)/1000).toFixed(2)} kWh</strong></td></tr>
-      <tr style="background:#fff7ed"><td><strong>Solar Power Required</strong></td><td><strong>${fmt(r.solarPowerW||0)} W / ${((r.solarPowerW||0)/1000).toFixed(2)} kW</strong></td></tr>
-      <tr><td>Adjusted Panel Capacity</td><td><strong>${fmt(r.adjustedPanelW||0)} W</strong></td></tr>
-      <tr style="background:#f0fdf4"><td><strong>Number of Solar Panels</strong></td><td><strong>${r.numPanels||0} panels</strong></td></tr>
-      <tr><td>Inverter Size</td><td><strong>${(r.inverterKVA||0).toFixed(2)} kVA (${audit.inverterBrand||''})</strong></td></tr>
-      <tr><td>Selected Inverter</td><td><strong>${(r.selectedInverterKVA||0).toFixed(1)} kVA</strong></td></tr>
-      <tr><td>Days of Autonomy</td><td><strong>${state.config.daysOfAutonomy||1} day(s)</strong></td></tr>
+      <tr style="background:#fff7ed"><td><strong>Adjusted Energy Demand</strong><br><span style="font-size:11px;color:#9ca3af">+${Math.round((state.config.systemLoss ?? 0.2)*100)}% system loss</span></td><td><strong>${fmt(r.adjustedEnergyWh||0)} Wh / ${(r.adjustedEnergyKWh||0).toFixed(2)} kWh</strong></td></tr>
+      <tr><td>Inverter</td><td><strong>${escHTML(eq.inverter)}</strong><br><span style="font-size:11px;color:#9ca3af">${r.requiredKWRounded != null ? r.requiredKWRounded + ' kW required · ' : ''}${(r.selectedInverterKVA||0)} kW installed</span></td></tr>
+      <tr><td>Battery Bank</td><td><strong>${(r.batteryKWh||0).toFixed(1)} kWh — ${escHTML(eq.battery)}</strong><br><span style="font-size:11px;color:#9ca3af">${eq.battType} · ${Math.ceil(r.battCapacityAh||0)} Ah needed @ ${eq.sysV}V${r.batterySeries > 1 ? ' · ' + r.batteryStrings + ' strings of ' + r.batterySeries : ''}</span></td></tr>
+      <tr><td>Battery Runtime</td><td><strong>${Math.round(r.battRuntimeHrs||0)} hrs</strong> (${r.backupDays || state.config.daysOfAutonomy || 1} day(s) of autonomy)</td></tr>
+      <tr style="background:#f0fdf4"><td><strong>Solar Panels</strong></td><td><strong>${fmt(r.panelW)} W — ${escHTML(eq.panels)}</strong>${r.pvStrings ? `<br><span style="font-size:11px;color:#9ca3af">${r.pvStrings} string${r.pvStrings > 1 ? 's' : ''} of ${r.panelsPerString} panels${units > 1 ? ' per inverter' : ''}</span>` : ''}</td></tr>
+      ${r.dailySolarWh ? `<tr><td>Daily Solar Generation</td><td><strong>${(r.dailySolarWh/1000).toFixed(1)} kWh</strong></td></tr>` : ''}
     </table>
     <div class="quote-section-title">Cost Breakdown (${cur.code})</div>
     <table class="quote-table">
       <tr><th>Item</th><th style="text-align:right">Amount (${cur.symbol})</th></tr>
-      <tr><td>Solar Panels (${fmt(r.panelW)}W)</td><td style="text-align:right">${c(r.cPanels)}</td></tr>
-      <tr><td>Battery Bank (${(r.batteryKWh||0).toFixed(1)} kWh)</td><td style="text-align:right">${c(r.cBattery)}</td></tr>
-      <tr><td>Inverter/Charger (${(r.inverterKVA||0).toFixed(1)} kVA)</td><td style="text-align:right">${c(r.cInverter)}</td></tr>
-      <tr><td>Cabling &amp; Wiring</td><td style="text-align:right">${c(r.cCabling)}</td></tr>
-      <tr><td>Mounting Structure</td><td style="text-align:right">${c(r.cMounting)}</td></tr>
-      <tr><td>Accessories &amp; Protections</td><td style="text-align:right">${c(r.cAccessories)}</td></tr>
-      <tr><td>Installation &amp; Labour</td><td style="text-align:right">${c(r.cInstall)}</td></tr>
+      ${costRows}
+      <tr><td>Accessories — cabling, breakers &amp; mounting kits</td><td ${td}>${c(r.cAccessories)}</td></tr>
+      ${bomRows}
+      <tr><td>Installation fee (${+(installPct*100).toFixed(1)}%)</td><td ${td}>${c(r.cInstall)}</td></tr>
+      ${r.cLogistics ? `<tr><td>Logistics</td><td ${td}>${c(r.cLogistics)}</td></tr>` : ''}
+      <tr><td>Professional service — 1-year free support</td><td ${td}>FREE</td></tr>
     </table>
     <div class="quote-total-section">
-      <div class="quote-total-row"><span>Equipment Subtotal</span><span>${c(r.equipTotal)}</span></div>
-      <div class="quote-total-row"><span>Installation (${((state.config.installPct||0.12)*100).toFixed(0)}%)</span><span>${c(r.cInstall)}</span></div>
+      <div class="quote-total-row"><span>Equipment &amp; Accessories</span><span>${c(r.equipTotal)}</span></div>
+      <div class="quote-total-row"><span>Installation${r.cLogistics ? ' &amp; Logistics' : ''}</span><span>${c((r.cInstall||0) + (r.cLogistics||0))}</span></div>
       ${(audit.markup||0)>0?`<div class="quote-total-row"><span>Margin (${audit.markup}%)</span><span>${c(r.markupAmt)}</span></div>`:''}
-      <div class="quote-total-final"><span>TOTAL INVESTMENT</span><span>${c(r.total)}</span></div>
+      <div class="quote-total-final"><span>TOTAL PAYABLE</span><span>${c(r.total)}</span></div>
     </div>
     <div style="margin-top:28px">
       <div class="quote-section-title">Audit Report Summary</div>
@@ -2996,8 +2997,8 @@ function renderQuoteHTML(quote) {
         </tr>
         <tr style="background:#fff7ed">
           <td style="padding:12px 14px;font-weight:700;color:#111;border-bottom:1px solid #fed7aa">&#9889; System Load / Inverter</td>
-          <td style="padding:12px 14px;text-align:center;border-bottom:1px solid #fed7aa;color:#374151">${fmt(r.inverterSizeW||0)} W | ${(r.inverterKVA||0).toFixed(2)} kVA</td>
-          <td style="padding:12px 14px;text-align:center;border-bottom:1px solid #fed7aa;font-weight:700;color:#f97316;font-size:16px">${(r.selectedInverterKVA||0).toFixed(1)} kVA</td>
+          <td style="padding:12px 14px;text-align:center;border-bottom:1px solid #fed7aa;color:#374151">${fmt(r.totalLoad||0)} W | ${r.requiredKWRounded != null ? r.requiredKWRounded + ' kW' : (r.inverterKVA||0).toFixed(2) + ' kVA'}</td>
+          <td style="padding:12px 14px;text-align:center;border-bottom:1px solid #fed7aa;font-weight:700;color:#f97316;font-size:16px">${(r.selectedInverterKVA||0)} kW</td>
         </tr>
         <tr>
           <td style="padding:12px 14px;font-weight:700;color:#111;border-bottom:1px solid #e5e7eb">&#128267; Energy Storage / Batteries</td>
@@ -3006,13 +3007,13 @@ function renderQuoteHTML(quote) {
         </tr>
         <tr style="background:#fff7ed">
           <td style="padding:12px 14px;font-weight:700;color:#111">&#9728;&#65039; Solar Power / Panels</td>
-          <td style="padding:12px 14px;text-align:center;color:#374151">${fmt(r.solarPowerW||0)} W | ${fmt(r.adjustedPanelW||0)} W adj.</td>
+          <td style="padding:12px 14px;text-align:center;color:#374151">${fmt(r.solarPowerW||0)} W | ${r.panelsNeeded != null ? r.panelsNeeded + ' needed' : fmt(r.adjustedPanelW||0) + ' W adj.'}</td>
           <td style="padding:12px 14px;text-align:center;font-weight:700;color:#f97316;font-size:16px">${r.numPanels||0} panels</td>
         </tr>
       </table>
     </div>
     <div class="quote-footer">
-      ${co.name} &middot; ${co.address} &middot; ${co.web}<br>
+      ${[co.name, co.address, co.web].filter(Boolean).map(escHTML).join(' &middot; ')}<br>
       This quote is valid for 30 days from issue date. Prices subject to component availability.
     </div>
   </div>`;
@@ -3032,8 +3033,8 @@ function buildCurrentAudit() {
     markup:        parseFloat(document.getElementById('markup').value) || 0,
     appliances:       JSON.parse(JSON.stringify(state.appliances)),
     customAppliances: JSON.parse(JSON.stringify(state.customAppliances || [])),
+    design: getDesignChoice(),
     result: calcSystem(state.appliances, {
-      batteryType: document.getElementById('battery-type').value,
       markup:      parseFloat(document.getElementById('markup').value) || 0
     })
   };
@@ -3139,10 +3140,12 @@ function downloadPDF() {
   doc.text('Selected', MARGIN + CONTENT_W - 2, y + 3.5, { align: 'right' });
   y += 6.5;
 
+  const eq = quoteEquipment(r, audit);
+  const clip = (s, n) => (s = String(s || '')).length > n ? s.slice(0, n - 1) + '…' : s;
   const auditRows = [
-    ['Load / Inverter', fmt(Math.round(r.inverterSizeW||0)) + ' W  |  ' + (r.inverterKVA||0).toFixed(2) + ' kVA', (r.selectedInverterKVA||0).toFixed(1) + ' kVA'],
+    ['Load / Inverter', fmt(Math.round(r.totalLoad||0)) + ' W  |  ' + (r.requiredKWRounded != null ? r.requiredKWRounded + ' kW' : (r.inverterKVA||0).toFixed(2) + ' kVA'), (r.selectedInverterKVA||0) + ' kW'],
     ['Storage / Batteries', fmt(Math.round(r.totalBattEnergyWh||0)) + ' Wh  |  ' + Math.ceil(r.battCapacityAh||0) + ' Ah', (r.totalBatteries||0) + ' batteries'],
-    ['Solar / Panels', fmt(Math.round(r.solarPowerW||0)) + ' W  |  ' + fmt(Math.round(r.adjustedPanelW||0)) + ' W adj.', (r.numPanels||0) + ' panels'],
+    ['Solar / Panels', fmt(Math.round(r.solarPowerW||0)) + ' W  |  ' + (r.panelsNeeded != null ? r.panelsNeeded + ' needed' : fmt(Math.round(r.adjustedPanelW||0)) + ' W adj.'), (r.numPanels||0) + ' panels'],
   ];
   auditRows.forEach(([param, calc, sel], i) => {
     const h = 8;
@@ -3166,13 +3169,12 @@ function downloadPDF() {
   const specs = [
     ['Total Load',              fmt(r.totalLoad || 0) + ' W'],
     ['Total Energy Demand',     fmt(r.totalEnergyWh || 0) + ' Wh  /  ' + (r.totalEnergyKWh || 0).toFixed(2) + ' kWh'],
-    ['Adjusted Energy (+20%)',  fmt(r.adjustedEnergyWh || 0) + ' Wh  /  ' + (r.adjustedEnergyKWh || 0).toFixed(2) + ' kWh'],
-    ['Inverter Size (calc.)',   (r.inverterKVA || 0).toFixed(2) + ' kVA'],
-    ['Inverter Selected',       (r.selectedInverterKVA || 0).toFixed(1) + ' kVA'],
-    ['Solar Panels',            fmt(r.panelW || 0) + ' W  (' + (r.numPanels || 0) + ' x ' + (state.config.individualPanelW || 400) + 'W)'],
-    ['Battery Bank (calc.)',    Math.ceil(r.battCapacityAh || 0) + ' Ah  /  ' + fmt(r.battCapacityWh || 0) + ' Wh'],
-    ['Batteries Installed',     (r.totalBatteries || 0) + ' x ' + (state.config.individualBattAh || 200) + 'Ah @ ' + (state.config.battVoltage || 48) + 'V  (' + (audit.batteryType || 'lithium') + ')'],
-    ['Days of Autonomy',        (state.config.daysOfAutonomy || 1) + ' day(s)'],
+    ['Adjusted Energy Demand',  fmt(r.adjustedEnergyWh || 0) + ' Wh  /  ' + (r.adjustedEnergyKWh || 0).toFixed(2) + ' kWh'],
+    ['Inverter',                clip(eq.inverter, 60)],
+    ['Batteries',               clip(eq.battery, 50) + '  (' + (r.batteryKWh || 0).toFixed(1) + ' kWh @ ' + eq.sysV + 'V)'],
+    ['Solar Panels',            clip(eq.panels, 50) + '  (' + fmt(r.panelW || 0) + ' W)'],
+    ['PV Strings',              r.pvStrings ? r.pvStrings + ' x ' + r.panelsPerString + ' panels' + ((r.invUnits || 1) > 1 ? ' per inverter' : '') : '-'],
+    ['Days of Autonomy',        (r.backupDays || state.config.daysOfAutonomy || 1) + ' day(s)'],
   ];
   specs.forEach(([l, v], i) => tableRow(l, v, i));
   y += 6;
@@ -3182,17 +3184,26 @@ function downloadPDF() {
   // ════════════════════════════════════════════════════════════════
   sectionHeader('COST BREAKDOWN', 'Amount (NGN)');
 
+  const installPct = r.installPct != null ? r.installPct : (state.config.installPct ?? 0.08);
   const items = [
-    ['Solar Panels',        r.cPanels],
-    ['Battery Bank',        r.cBattery],
-    ['Inverter / Charger',  r.cInverter],
-    ['Cabling & Wiring',    r.cCabling],
-    ['Mounting Structure',  r.cMounting],
-    ['Accessories',         r.cAccessories],
-    ['Installation & Labour', r.cInstall],
+    ['Inverter - ' + clip(eq.inverter, 55), r.cInverter],
+    ['Solar Panels - ' + clip(eq.panels, 55), r.cPanels],
+    ['Batteries - ' + clip(eq.battery, 55), r.cBattery],
+    ['Accessories (cabling, breakers, mounting)', r.cAccessories],
+    ['Installation fee (' + +(installPct * 100).toFixed(1) + '%)', r.cInstall],
   ];
+  if (r.cLogistics) items.push(['Logistics', r.cLogistics]);
   items.forEach(([l, v], i) => tableRow(l, 'NGN ' + fmt(v || 0), i));
+  tableRow('Professional service - 1-year free support', 'FREE', items.length);
   y += 6;
+
+  // ── Itemised accessories ─────────────────────────────────────
+  if ((r.bom || []).length) {
+    sectionHeader('ACCESSORIES LIST', 'Qty x Unit = Total (NGN)');
+    r.bom.forEach((l, i) => tableRow(clip(l.label + (l.note ? ' - ' + l.note : ''), 60),
+      l.qty + ' x ' + fmt(l.unit) + ' = ' + fmt(l.total), i, 5.5));
+    y += 6;
+  }
 
   // ── Total box ────────────────────────────────────────────────
   checkPage(26);
@@ -3201,7 +3212,7 @@ function downloadPDF() {
   doc.setDrawColor(...ORANGE); doc.setLineWidth(0.5);
   doc.rect(MARGIN, y, CONTENT_W, 22);
   doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...ORANGE);
-  doc.text('TOTAL INVESTMENT', MARGIN + 4, y + 9);
+  doc.text('TOTAL PAYABLE', MARGIN + 4, y + 9);
   doc.setFontSize(15); doc.text('NGN ' + fmt(r.total || 0), MARGIN + CONTENT_W - 2, y + 15, { align: 'right' });
   y += 28;
 
@@ -3230,7 +3241,7 @@ function renderAuditsList() {
       </div>
       <div class="audit-badges">
         <span class="badge badge-orange">${fmt(a.result.totalLoad)}W</span>
-        <span class="badge badge-blue">${(a.result.selectedInverterKVA || a.result.inverterKVA || 0).toFixed(1)} kVA</span>
+        <span class="badge badge-blue">${a.result.inverter ? (a.result.selectedInverterKVA || 0) + ' kW' : (a.result.selectedInverterKVA || a.result.inverterKVA || 0).toFixed(1) + ' kVA'}</span>
         <span class="badge badge-green">${fmtCur(a.result.total)}</span>
       </div>
     </div>
@@ -3289,8 +3300,8 @@ function openAuditModal(id) {
         <div class="breakdown-item"><div class="breakdown-label">Adjusted Panel Capacity</div><div class="breakdown-val">${fmt(Math.round(r.adjustedPanelW||0))} W</div></div>
         <div class="breakdown-item"><div class="breakdown-label">Number of Panels</div><div class="breakdown-val" style="color:var(--green)">${r.numPanels||0} panels</div></div>
         <div class="breakdown-item"><div class="breakdown-label">Inverter Size (W)</div><div class="breakdown-val">${fmt(Math.round(r.inverterSizeW||0))} W</div></div>
-        <div class="breakdown-item"><div class="breakdown-label">Inverter Size (kVA)</div><div class="breakdown-val" style="color:var(--yellow)">${(r.inverterKVA||0).toFixed(2)} kVA</div></div>
-        <div class="breakdown-item"><div class="breakdown-label">Selected Inverter</div><div class="breakdown-val">${(r.selectedInverterKVA||0).toFixed(1)} kVA</div></div>
+        <div class="breakdown-item"><div class="breakdown-label">Inverter Required</div><div class="breakdown-val" style="color:var(--yellow)">${r.requiredKWRounded != null ? r.requiredKWRounded + ' kW' : (r.inverterKVA||0).toFixed(2) + ' kVA'}</div></div>
+        <div class="breakdown-item"><div class="breakdown-label">Selected Inverter</div><div class="breakdown-val">${r.inverter ? escHTML(r.inverter.label) + ((r.invUnits||1) > 1 ? ' × ' + r.invUnits : '') : (r.selectedInverterKVA||0).toFixed(1) + ' kVA'}</div></div>
       </div>
     </div>
     <div class="breakdown-total" style="margin-top:16px">
@@ -3310,8 +3321,8 @@ function openAuditModal(id) {
         </tr>
         <tr style="background:#fff7ed">
           <td style="padding:12px 14px;font-weight:700;color:#111;border-bottom:1px solid #fed7aa">⚡ System Load / Inverter Size</td>
-          <td style="padding:12px 14px;text-align:center;border-bottom:1px solid #fed7aa;color:#374151">${fmt(Math.round(r.inverterSizeW||0))} W &nbsp;|&nbsp; ${(r.inverterKVA||0).toFixed(2)} kVA</td>
-          <td style="padding:12px 14px;text-align:center;border-bottom:1px solid #fed7aa;font-weight:700;color:var(--accent);font-size:16px">${(r.selectedInverterKVA||0).toFixed(1)} kVA</td>
+          <td style="padding:12px 14px;text-align:center;border-bottom:1px solid #fed7aa;color:#374151">${fmt(Math.round(r.inverterSizeW||0))} W &nbsp;|&nbsp; ${r.requiredKWRounded != null ? r.requiredKWRounded + ' kW' : (r.inverterKVA||0).toFixed(2) + ' kVA'}</td>
+          <td style="padding:12px 14px;text-align:center;border-bottom:1px solid #fed7aa;font-weight:700;color:var(--accent);font-size:16px">${r.inverter ? (r.selectedInverterKVA||0) + ' kW' : (r.selectedInverterKVA||0).toFixed(1) + ' kVA'}</td>
         </tr>
         <tr style="background:#fff">
           <td style="padding:12px 14px;font-weight:700;color:#111;border-bottom:1px solid #fed7aa">🔋 Energy Storage / No. of Batteries</td>
@@ -3380,120 +3391,201 @@ function closeModal(id) {
 // PRODUCT CATALOG — PRICING ENGINE
 // ============================================================
 
+// Products, specs and prices from the AUDIT QUOTATION workbook (user + dealer price lists).
+// userPrice is what clients are quoted; dealerPrice is the trade price.
+const CATALOG_VERSION = 2;
 const DEFAULT_CATALOG = {
   panels: [
-    { brand:'Jinko Solar', items:[
-      { id:'j1', label:'450W', watt:450, dealerPrice:120000 },
-      { id:'j2', label:'480W', watt:480, dealerPrice:125000 },
-      { id:'j3', label:'550W', watt:550, dealerPrice:130000 },
-      { id:'j4', label:'580W', watt:580, dealerPrice:135000 },
-      { id:'j5', label:'615W', watt:615, dealerPrice:140000 },
-      { id:'j6', label:'700W', watt:700, dealerPrice:165000 },
+    { brand:"Jinko", items:[
+      {"id":"jk440", "label":"Jinko Tiger Neo 440W", "watt":440, "isc":13.86, "imp":13.41, "voc":39.38, "vmp":32.31, "userPrice":129990, "dealerPrice":123800},
+      {"id":"jk480", "label":"Jinko Mono 480W", "watt":480, "isc":14.3, "imp":13.57, "voc":52.3, "vmp":43.5, "userPrice":139230, "dealerPrice":132600},
+      {"id":"jk555", "label":"Jinko Tiger Neo 555W", "watt":555, "isc":14.07, "imp":13.3, "voc":50.3, "vmp":41.7, "userPrice":149625, "dealerPrice":142500},
+      {"id":"jk580", "label":"Jinko Tiger Neo 580W", "watt":580, "isc":14.47, "imp":13.69, "voc":51.02, "vmp":42.37, "userPrice":138075, "dealerPrice":131500},
+      {"id":"jk615", "label":"Jinko Tiger Neo 615W", "watt":615, "isc":14.18, "imp":13.46, "voc":55.4, "vmp":45.69, "userPrice":155400, "dealerPrice":148000},
     ]},
-    { brand:'Canadian Solar', items:[
-      { id:'c1', label:'400W', watt:400, dealerPrice:125000 },
-      { id:'c2', label:'450W', watt:450, dealerPrice:130000 },
-      { id:'c3', label:'555W', watt:555, dealerPrice:145000 },
-      { id:'c4', label:'600W', watt:600, dealerPrice:155000 },
-      { id:'c5', label:'700W', watt:700, dealerPrice:170000 },
+    { brand:"Canadian", items:[
+      {"id":"cs380", "label":"Canadian 380W", "watt":380, "isc":10.01, "imp":9.5, "voc":47.8, "vmp":40.0, "userPrice":132300, "dealerPrice":126000},
+      {"id":"cs410", "label":"Canadian 410W", "watt":410, "isc":9.6, "imp":9.23, "voc":53.4, "vmp":44.5, "userPrice":134610, "dealerPrice":128200},
+      {"id":"cs450", "label":"Canadian 455W", "watt":450, "isc":11.6, "imp":11.02, "voc":49.3, "vmp":41.3, "userPrice":149625, "dealerPrice":142500},
+      {"id":"cs550", "label":"Canadian 550W", "watt":550, "isc":14.0, "imp":13.25, "voc":49.8, "vmp":41.9, "userPrice":178500, "dealerPrice":170000},
+      {"id":"cs605", "label":"Canadian 605W", "watt":605, "isc":18.52, "imp":17.25, "voc":41.5, "vmp":35.1, "userPrice":192360, "dealerPrice":183200},
+      {"id":"cs705", "label":"Canadian 700W", "watt":705, "isc":18.54, "imp":17.55, "voc":48.1, "vmp":40.2, "userPrice":195825, "dealerPrice":186500},
     ]},
-    { brand:'LONGi Solar', items:[
-      { id:'l1', label:'550W', watt:550, dealerPrice:145000 },
-      { id:'l2', label:'600W', watt:600, dealerPrice:150000 },
-    ]},
-    { brand:'Trina Solar', items:[
-      { id:'t1', label:'550W', watt:550, dealerPrice:145000 },
-      { id:'t2', label:'600W', watt:600, dealerPrice:150000 },
+    { brand:"Astronergy", items:[
+      {"id":"as480", "label":"Astronergy Mono 480W", "watt":480, "isc":13.9, "imp":13.14, "voc":43.46, "vmp":36.5, "userPrice":114975, "dealerPrice":109500},
+      {"id":"as575", "label":"Astronergy Bifacial 575W", "watt":575, "isc":14.19, "imp":13.39, "voc":51.1, "vmp":42.94, "userPrice":138600, "dealerPrice":132000},
     ]},
   ],
   batteries: [
-    { brand:'Lead-Acid', type:'lead', items:[
-      { id:'la1', label:'100Ah 12V', ah:100, volt:12, kwh:1.2, dealerPrice:160000 },
-      { id:'la2', label:'150Ah 12V', ah:150, volt:12, kwh:1.8, dealerPrice:220000 },
-      { id:'la3', label:'200Ah 12V', ah:200, volt:12, kwh:2.4, dealerPrice:303000 },
+    { brand:"Restar", items:[
+      {"id":"rsa200", "label":"Restar AGM 200Ah 12V", "chem":"agm", "type":"lead", "ah":200, "volt":12, "kwh":2.4, "dod":0.7, "userPrice":317100, "dealerPrice":302000},
+      {"id":"rsa100", "label":"Restar AGM 100Ah 12V", "chem":"agm", "type":"lead", "ah":100, "volt":12, "kwh":1.2, "dod":0.7, "userPrice":161175, "dealerPrice":153500},
     ]},
-    { brand:'Itel Lithium', type:'lithium', items:[
-      { id:'il1', label:'100Ah 24V 2.5kWh', ah:100, volt:24, kwh:2.5, dealerPrice:600000 },
-      { id:'il2', label:'200Ah 24V 5kWh',   ah:200, volt:24, kwh:5,   dealerPrice:1100000 },
-      { id:'il3', label:'100Ah 48V 5kWh',   ah:100, volt:48, kwh:5,   dealerPrice:1100000 },
-      { id:'il4', label:'200Ah 48V 10kWh',  ah:200, volt:48, kwh:10,  dealerPrice:1989000 },
-      { id:'il5', label:'300Ah 48V 15kWh',  ah:300, volt:48, kwh:15,  dealerPrice:2500000 },
+    { brand:"Rita", items:[
+      {"id":"rtg200", "label":"Rita Gel 200Ah 12V", "chem":"gel", "type":"lead", "ah":200, "volt":12, "kwh":2.4, "dod":0.8, "userPrice":432600, "dealerPrice":412000},
     ]},
-    { brand:'Sako Lithium', type:'lithium', items:[
-      { id:'sk1', label:'100Ah 24V 2.5kWh',   ah:100, volt:24, kwh:2.5,  dealerPrice:550000 },
-      { id:'sk2', label:'200Ah 24V 5kWh',     ah:200, volt:24, kwh:5,    dealerPrice:1000000 },
-      { id:'sk3', label:'100Ah 48V 5kWh',     ah:100, volt:48, kwh:5,    dealerPrice:1000000 },
-      { id:'sk4', label:'200Ah 48V 10kWh',    ah:200, volt:48, kwh:10,   dealerPrice:1800000 },
-      { id:'sk5', label:'250Ah 48V 12.5kWh',  ah:250, volt:48, kwh:12.5, dealerPrice:1900000 },
-      { id:'sk6', label:'300Ah 48V',          ah:300, volt:48, kwh:null, dealerPrice:2100000 },
+    { brand:"Quanta", items:[
+      {"id":"qtg200", "label":"Quanta Gel 200Ah 12V", "chem":"gel", "type":"lead", "ah":200, "volt":12, "kwh":2.4, "dod":0.8, "userPrice":438375, "dealerPrice":417500},
     ]},
-    { brand:'Deye Lithium', type:'lithium', items:[
-      { id:'dy1', label:'100Ah 48V', ah:100, volt:48, kwh:5,   dealerPrice:1200000 },
-      { id:'dy2', label:'200Ah 48V', ah:200, volt:48, kwh:10,  dealerPrice:2200000 },
+    { brand:"Tubular", items:[
+      {"id":"tub220", "label":"Tubular 220Ah 12V", "chem":"tubular", "type":"lead", "ah":220, "volt":12, "kwh":2.64, "dod":0.5, "userPrice":288225, "dealerPrice":274500},
+    ]},
+    { brand:"Mega Tank", items:[
+      {"id":"mt100", "label":"Mega Tank 100Ah 48V 5kWh", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.9, "userPrice":1569750, "dealerPrice":1495000},
+    ]},
+    { brand:"SVC", items:[
+      {"id":"svc314_24", "label":"SVC 314Ah 24V 8kWh (rack)", "chem":"lithium", "type":"lithium", "ah":314, "volt":24, "kwh":7.54, "dod":0.8, "userPrice":1840650, "dealerPrice":1753000},
+      {"id":"svc213", "label":"SVC 213Ah 48V 11.78kWh", "chem":"lithium", "type":"lithium", "ah":213, "volt":48, "kwh":10.22, "dod":0.8, "userPrice":2506350, "dealerPrice":2387000},
+      {"id":"svc100", "label":"SVC 100Ah 48V 5kWh (rack)", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.8, "userPrice":1341000, "dealerPrice":1341000},
+      {"id":"svc200", "label":"SVC 200Ah 48V 10.24kWh (wall)", "chem":"lithium", "type":"lithium", "ah":200, "volt":48, "kwh":9.6, "dod":0.8, "userPrice":2361450, "dealerPrice":2249000},
+      {"id":"svc314", "label":"SVC BMF 314Ah 48V 16kWh", "chem":"lithium", "type":"lithium", "ah":314, "volt":48, "kwh":15.07, "dod":0.8, "userPrice":2880150, "dealerPrice":2743000},
+    ]},
+    { brand:"Itel", items:[
+      {"id":"itb100w", "label":"Itel 100Ah 48V 5kWh (wall)", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.8, "userPrice":1041915, "dealerPrice":992300},
+      {"id":"itb100s", "label":"Itel 100Ah 48V 5kWh (stackable)", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.8, "userPrice":1041915, "dealerPrice":992300},
+      {"id":"itb100_24", "label":"Itel 100Ah 24V 2.5kWh", "chem":"lithium", "type":"lithium", "ah":100, "volt":24, "kwh":2.4, "dod":0.8, "userPrice":572985, "dealerPrice":545700},
+      {"id":"itb200", "label":"Itel 200Ah 51V 10kWh", "chem":"lithium", "type":"lithium", "ah":200, "volt":48, "kwh":9.6, "dod":0.8, "userPrice":1810000, "dealerPrice":1880000},
+      {"id":"itb280", "label":"Itel 280Ah 51V 14kWh", "chem":"lithium", "type":"lithium", "ah":280, "volt":48, "kwh":13.44, "dod":0.8, "userPrice":2609250, "dealerPrice":2485000},
+    ]},
+    { brand:"Growatt", items:[
+      {"id":"gwb55", "label":"Growatt 5.5kWh Li-ion", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.9, "userPrice":1803000, "dealerPrice":1803000},
+    ]},
+    { brand:"Pylontech", items:[
+      {"id":"pyl51", "label":"Pylontech 5.1kWh Li-ion", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.9, "userPrice":1803000, "dealerPrice":1803000},
+      {"id":"pyl24", "label":"Pylontech 2.4kWh 50Ah 48V", "chem":"lithium", "type":"lithium", "ah":50, "volt":48, "kwh":2.4, "dod":0.9, "userPrice":0, "dealerPrice":0},
+    ]},
+    { brand:"PRM Solar", items:[
+      {"id":"prm300", "label":"PRM PT48300 300Ah 51V", "chem":"lithium", "type":"lithium", "ah":300, "volt":48, "kwh":14.4, "dod":0.8, "userPrice":0, "dealerPrice":0},
+    ]},
+    { brand:"SMS", items:[
+      {"id":"smb100", "label":"SMS 100Ah 48V 5kWh", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.8, "userPrice":1050000, "dealerPrice":1000000},
+      {"id":"smb200_24", "label":"SMS 200Ah 24V 5kWh", "chem":"lithium", "type":"lithium", "ah":200, "volt":24, "kwh":4.8, "dod":0.8, "userPrice":1050000, "dealerPrice":1000000},
+      {"id":"smb300_24", "label":"SMS 300Ah 24V 7.6kWh", "chem":"lithium", "type":"lithium", "ah":300, "volt":24, "kwh":7.2, "dod":0.8, "userPrice":1281000, "dealerPrice":1220000},
+      {"id":"smb200", "label":"SMS 200Ah 48V 10kWh", "chem":"lithium", "type":"lithium", "ah":200, "volt":48, "kwh":9.6, "dod":0.8, "userPrice":1858500, "dealerPrice":1770000},
+      {"id":"smb300", "label":"SMS 300Ah 48V 15kWh", "chem":"lithium", "type":"lithium", "ah":300, "volt":48, "kwh":14.4, "dod":0.8, "userPrice":2320500, "dealerPrice":2210000},
+    ]},
+    { brand:"Deye", items:[
+      {"id":"dyb100", "label":"Deye 100Ah 48V 5kWh LV", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.8, "userPrice":1627500, "dealerPrice":1550000},
+      {"id":"dyb100_51", "label":"Deye 100Ah 51V 5kWh LV", "chem":"lithium", "type":"lithium", "ah":100, "volt":48, "kwh":4.8, "dod":0.8, "userPrice":1193220, "dealerPrice":1136400},
     ]},
   ],
   inverters: [
-    { brand:'Growatt', items:[
-      { id:'gw1', label:'3kW 24V',   kw:3,   volt:24, dealerPrice:450000 },
-      { id:'gw2', label:'3.5kW 48V', kw:3.5, volt:48, dealerPrice:650000 },
-      { id:'gw3', label:'5kW 48V',   kw:5,   volt:48, dealerPrice:700000 },
-      { id:'gw4', label:'6kW 48V',   kw:6,   volt:48, dealerPrice:800000 },
-      { id:'gw5', label:'10kW 48V',  kw:10,  volt:48, dealerPrice:2700000 },
-      { id:'gw6', label:'12kW 48V',  kw:12,  volt:48, dealerPrice:3000000 },
+    { brand:"Growatt", items:[
+      {"id":"gw3", "label":"Growatt SPF3000TL HVM-24 (3kW 24V)", "kw":3, "phase":1, "volt":24, "pvInput":1.5, "pvMaxV":102, "mpptMaxA":50, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":449400, "dealerPrice":428000},
+      {"id":"gw35", "label":"Growatt SPF3500 ES (3.5kW 48V)", "kw":3.5, "phase":1, "volt":48, "pvInput":4.5, "pvMaxV":450, "mpptMaxA":80, "mpptNo":1, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":582225, "dealerPrice":554500},
+      {"id":"gw5", "label":"Growatt SPF5000 ES (5kW 48V)", "kw":5, "phase":1, "volt":48, "pvInput":4.5, "pvMaxV":450, "mpptMaxA":100, "mpptNo":1, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":622650, "dealerPrice":593000},
+      {"id":"gw6", "label":"Growatt SPF6000ES PLUS (6kW 48V)", "kw":6, "phase":1, "volt":48, "pvInput":8.0, "pvMaxV":500, "mpptMaxA":16, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":691950, "dealerPrice":659000},
+      {"id":"gw8", "label":"Growatt SPF8000T HVM (8kW 48V)", "kw":8, "phase":3, "volt":48, "pvInput":12.0, "pvMaxV":1000, "mpptMaxA":16.9, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":2412900, "dealerPrice":2298000},
+      {"id":"gw10", "label":"Growatt SPH 10000TL3 BH (10kW 3P)", "kw":10, "phase":3, "volt":48, "pvInput":15.0, "pvMaxV":1000, "mpptMaxA":16.9, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":2597700, "dealerPrice":2474000},
+      {"id":"gw12", "label":"Growatt SPE 12000 ES (12kW 48V)", "kw":12, "phase":1, "volt":48, "pvInput":15.0, "pvMaxV":550, "mpptMaxA":27, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":1384950, "dealerPrice":1319000},
     ]},
-    { brand:'Itel Inverter', items:[
-      { id:'it1', label:'1.5kW 24V',       kw:1.5, volt:24, dealerPrice:270000 },
-      { id:'it2', label:'2kW 12V',         kw:2,   volt:12, dealerPrice:280000 },
-      { id:'it3', label:'3kW 24V',         kw:3,   volt:24, dealerPrice:400000 },
-      { id:'it4', label:'4kW 24V',         kw:4,   volt:24, dealerPrice:500000 },
-      { id:'it5', label:'6kW 48V',         kw:6,   volt:48, dealerPrice:700000 },
-      { id:'it6', label:'8kW 48V 2P',      kw:8,   volt:48, dealerPrice:1200000 },
-      { id:'it7', label:'12kW 48V 2P',     kw:12,  volt:48, dealerPrice:1500000 },
-      { id:'it8', label:'8kW 48V 3P',      kw:8,   volt:48, dealerPrice:2600000 },
-      { id:'it9', label:'12kW 48V 3P',     kw:12,  volt:48, dealerPrice:3100000 },
+    { brand:"Gennex", items:[
+      {"id":"gx3", "label":"Gennex MKS PLUS 3kW 24V", "kw":3, "phase":1, "volt":24, "pvInput":1.0, "pvMaxV":100, "mpptMaxA":40, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":527940, "dealerPrice":502800},
+      {"id":"gx5", "label":"Gennex MKS III 5kW 48V", "kw":5, "phase":1, "volt":48, "pvInput":4.5, "pvMaxV":450, "mpptMaxA":80, "mpptNo":1, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":696570, "dealerPrice":663400},
+      {"id":"gx6", "label":"Gennex VM III Twin 6kW 48V", "kw":6, "phase":1, "volt":48, "pvInput":6.0, "pvMaxV":450, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":834015, "dealerPrice":794300},
+      {"id":"gx8", "label":"Gennex MAX Twin 8kW 48V", "kw":8, "phase":1, "volt":48, "pvInput":8.0, "pvMaxV":500, "mpptMaxA":30, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":1428262, "dealerPrice":1360250},
+      {"id":"gx10", "label":"Gennex Infini Solar 10kW 3P 48V", "kw":10, "phase":3, "volt":48, "pvInput":14.85, "pvMaxV":900, "mpptMaxA":18.6, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":2753625, "dealerPrice":2622500},
+      {"id":"gx15", "label":"Gennex 15kW 3P 48V", "kw":15, "phase":3, "volt":48, "pvInput":22.5, "pvMaxV":1000, "mpptMaxA":30, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":4329045, "dealerPrice":4122900},
     ]},
-    { brand:'SMS Hybrid', items:[
-      { id:'sm1', label:'1.5kW 24V',  kw:1.5, volt:24, dealerPrice:170000 },
-      { id:'sm2', label:'2kW 12V',    kw:2,   volt:12, dealerPrice:250000 },
-      { id:'sm3', label:'3.2kW 24V',  kw:3.2, volt:24, dealerPrice:400000 },
-      { id:'sm4', label:'4.2kW 24V',  kw:4.2, volt:24, dealerPrice:420000 },
-      { id:'sm5', label:'6.2kW 48V',  kw:6.2, volt:48, dealerPrice:600000 },
-      { id:'sm6', label:'8.2kW 48V',  kw:8.2, volt:48, dealerPrice:800000 },
-      { id:'sm7', label:'10.2kW 48V', kw:10.2,volt:48, dealerPrice:1000000 },
+    { brand:"Itel", items:[
+      {"id":"it15", "label":"Itel 1.5kVA 12V", "kw":1.5, "phase":1, "volt":12, "pvInput":0.65, "pvMaxV":130, "mpptMaxA":20, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":271530, "dealerPrice":258600},
+      {"id":"it36", "label":"Itel 3.6kW 24V IP54", "kw":3.6, "phase":1, "volt":24, "pvInput":5.0, "pvMaxV":500, "mpptMaxA":20, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":403546, "dealerPrice":384330},
+      {"id":"it3", "label":"Itel 3kW 24V IP54", "kw":3, "phase":1, "volt":24, "pvInput":1.5, "pvMaxV":145, "mpptMaxA":20, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":410130, "dealerPrice":390600},
+      {"id":"it4", "label":"Itel 4kW 24V IP54", "kw":4, "phase":1, "volt":24, "pvInput":6.0, "pvMaxV":500, "mpptMaxA":20, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":477120, "dealerPrice":454400},
+      {"id":"it6", "label":"Itel 6kW 48V IP54", "kw":6, "phase":1, "volt":48, "pvInput":8.0, "pvMaxV":500, "mpptMaxA":34, "mpptNo":1, "hasMppt":"yes", "parallel":"yes", "maxParallel":12, "eff":0.95, "userPrice":703500, "dealerPrice":670000},
+      {"id":"it12", "label":"Itel 12kW 48V IP54", "kw":12, "phase":1, "volt":48, "pvInput":16.0, "pvMaxV":500, "mpptMaxA":27, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":12, "eff":0.95, "userPrice":1406000, "dealerPrice":1436000},
+      {"id":"it8p3", "label":"Itel 8kW 48V 3P IP66", "kw":8, "phase":3, "volt":48, "pvInput":16.0, "pvMaxV":1000, "mpptMaxA":18, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":12, "eff":0.95, "userPrice":2996175, "dealerPrice":2853500},
+      {"id":"it12p3", "label":"Itel 12kW 48V 3P IP66", "kw":12, "phase":3, "volt":48, "pvInput":24.0, "pvMaxV":1000, "mpptMaxA":18, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":12, "eff":0.95, "userPrice":1406000, "dealerPrice":3002000},
+    ]},
+    { brand:"SMS", items:[
+      {"id":"sms1", "label":"SMS 1kVA 12V", "kw":1, "phase":1, "volt":12, "pvInput":0.6, "pvMaxV":150, "mpptMaxA":40, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":241500, "dealerPrice":230000},
+      {"id":"sms15", "label":"SMS 1.5kVA 24V", "kw":1.5, "phase":1, "volt":24, "pvInput":1.2, "pvMaxV":400, "mpptMaxA":60, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":264600, "dealerPrice":252000},
+      {"id":"sms2", "label":"SMS 2kVA 12V", "kw":2, "phase":1, "volt":12, "pvInput":2.0, "pvMaxV":400, "mpptMaxA":60, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":287700, "dealerPrice":274000},
+      {"id":"sms36", "label":"SMS 3.6kVA 24V", "kw":3.6, "phase":1, "volt":24, "pvInput":6.2, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":310800, "dealerPrice":296000},
+      {"id":"sms42", "label":"SMS 4.2kVA 24V", "kw":4.2, "phase":1, "volt":24, "pvInput":6.2, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":391650, "dealerPrice":373000},
+      {"id":"sms62", "label":"SMS 6.2kVA 48V", "kw":6.2, "phase":1, "volt":48, "pvInput":6.5, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":449400, "dealerPrice":428000},
+      {"id":"sms82", "label":"SMS 8.2kVA 48V", "kw":8.2, "phase":1, "volt":48, "pvInput":8.2, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.95, "userPrice":749700, "dealerPrice":714000},
+      {"id":"sms102", "label":"SMS 10.2kVA 48V", "kw":10.2, "phase":1, "volt":48, "pvInput":10.2, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.95, "userPrice":819000, "dealerPrice":780000},
+    ]},
+    { brand:"Restar", items:[
+      {"id":"rs1", "label":"Restar 1kW 12V", "kw":1, "phase":1, "volt":12, "pvInput":0.6, "pvMaxV":150, "mpptMaxA":40, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.8, "userPrice":192990, "dealerPrice":183800},
+      {"id":"rs15", "label":"Restar 1.5kW 24V", "kw":1.5, "phase":1, "volt":24, "pvInput":1.2, "pvMaxV":400, "mpptMaxA":60, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.8, "userPrice":216090, "dealerPrice":205800},
+      {"id":"rs2", "label":"Restar 2kW 12V", "kw":2, "phase":1, "volt":12, "pvInput":2.0, "pvMaxV":400, "mpptMaxA":60, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.8, "userPrice":264600, "dealerPrice":252000},
+      {"id":"rs32", "label":"Restar 3.2kW 24V", "kw":3.2, "phase":1, "volt":24, "pvInput":3.2, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.8, "userPrice":333900, "dealerPrice":318000},
+      {"id":"rs42", "label":"Restar 4.2kW 24V", "kw":4.2, "phase":1, "volt":24, "pvInput":6.2, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.8, "userPrice":368550, "dealerPrice":351000},
+      {"id":"rs62", "label":"Restar 6.2kW 48V", "kw":6.2, "phase":1, "volt":48, "pvInput":6.5, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.8, "userPrice":447090, "dealerPrice":425800},
+      {"id":"rs102", "label":"Restar 10.2kW 48V", "kw":10.2, "phase":1, "volt":48, "pvInput":10.2, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.8, "userPrice":795900, "dealerPrice":758000},
+      {"id":"rs62p", "label":"Restar 6.2kW 48V (parallel)", "kw":6.2, "phase":1, "volt":48, "pvInput":6.5, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.8, "userPrice":564900, "dealerPrice":538000},
+      {"id":"rs11", "label":"Restar 11kW 48V", "kw":11, "phase":1, "volt":48, "pvInput":11.0, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"no", "maxParallel":1, "eff":0.8, "userPrice":934500, "dealerPrice":890000},
+      {"id":"rs11p", "label":"Restar 11kW 48V (parallel)", "kw":11, "phase":1, "volt":48, "pvInput":11.0, "pvMaxV":500, "mpptMaxA":27, "mpptNo":1, "hasMppt":"yes", "parallel":"yes", "maxParallel":6, "eff":0.8, "userPrice":1050000, "dealerPrice":1000000},
+    ]},
+    { brand:"Deye", items:[
+      {"id":"dy6", "label":"Deye 6kW Hybrid", "kw":6, "phase":1, "volt":48, "pvInput":9.6, "pvMaxV":500, "mpptMaxA":18, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":16, "eff":0.8, "userPrice":842100, "dealerPrice":802000},
+      {"id":"dy8", "label":"Deye 8kW Hybrid 3P", "kw":8, "phase":3, "volt":48, "pvInput":10.4, "pvMaxV":800, "mpptMaxA":13, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":10, "eff":0.8, "userPrice":2824080, "dealerPrice":2689600},
+      {"id":"dy10", "label":"Deye 10kW Hybrid", "kw":10, "phase":1, "volt":48, "pvInput":20.0, "pvMaxV":500, "mpptMaxA":26, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":12, "eff":0.8, "userPrice":3129000, "dealerPrice":2980000},
+      {"id":"dy12", "label":"Deye 12kW Hybrid 3P", "kw":12, "phase":3, "volt":48, "pvInput":15.6, "pvMaxV":800, "mpptMaxA":13, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":10, "eff":0.8, "userPrice":3406200, "dealerPrice":3244000},
+      {"id":"dy20", "label":"Deye 20kW Hybrid 3P", "kw":20, "phase":3, "volt":48, "pvInput":32.0, "pvMaxV":650, "mpptMaxA":36, "mpptNo":2, "hasMppt":"yes", "parallel":"yes", "maxParallel":10, "eff":0.8, "userPrice":5087880, "dealerPrice":4845600},
+      {"id":"dy50", "label":"Deye 50kW Hybrid 3P", "kw":50, "phase":3, "volt":48, "pvInput":65.0, "pvMaxV":600, "mpptMaxA":50, "mpptNo":4, "hasMppt":"yes", "parallel":"yes", "maxParallel":10, "eff":0.8, "userPrice":8289540, "dealerPrice":7894800},
+      {"id":"dy80", "label":"Deye 80kW Hybrid 3P", "kw":80, "phase":3, "volt":48, "pvInput":160.0, "pvMaxV":800, "mpptMaxA":80, "mpptNo":6, "hasMppt":"yes", "parallel":"yes", "maxParallel":10, "eff":0.8, "userPrice":13075860, "dealerPrice":12453200},
+      {"id":"dy100", "label":"Deye 100kW HV String 3P", "kw":100, "phase":3, "volt":48, "pvInput":150.0, "pvMaxV":850, "mpptMaxA":60, "mpptNo":6, "hasMppt":"yes", "parallel":"yes", "maxParallel":10, "eff":0.8, "userPrice":5217240, "dealerPrice":4968800},
+      {"id":"dy136", "label":"Deye 136kW HV String 3P", "kw":136, "phase":3, "volt":48, "pvInput":204.0, "pvMaxV":1000, "mpptMaxA":60, "mpptNo":8, "hasMppt":"yes", "parallel":"yes", "maxParallel":10, "eff":0.8, "userPrice":7171500, "dealerPrice":6830000},
     ]},
   ],
   accessories: [
-    { brand:'Protective Breakers', items:[
-      { id:'pb1',  label:'DC Breaker 32A/63A',       dealerPrice:9000   },
-      { id:'pb2',  label:'DC Breaker 125A',           dealerPrice:16000  },
-      { id:'pb3',  label:'MCCB 125A',                 dealerPrice:35000  },
-      { id:'pb4',  label:'MCCB 250A',                 dealerPrice:50000  },
-      { id:'pb5',  label:'MCCB Enclosure Box',        dealerPrice:12000  },
-      { id:'pb6',  label:'4-Way Enclosure Box 500P',  dealerPrice:500    },
-      { id:'pb7',  label:'AC Breaker 2P',             dealerPrice:9000   },
-      { id:'pb8',  label:'AC Breaker 4P',             dealerPrice:30000  },
-      { id:'pb9',  label:'AC Surge Breaker 2P',       dealerPrice:13000  },
-      { id:'pb10', label:'AC Surge Breaker 4P 300P',  dealerPrice:3000   },
-      { id:'pb11', label:'Bypass Changeover 100A',    dealerPrice:13000  },
-      { id:'pb12', label:'Bypass Changeover 250A',    dealerPrice:35000  },
-      { id:'pb13', label:'12-Way Enclosure Box',      dealerPrice:11000  },
-      { id:'pb14', label:'Trunk Pipe',                dealerPrice:4000   },
+    { brand:"Cables", items:[
+      {"id":"solarCable6mm", "key":"solarCable6mm", "label":"2C × 6mm Solar Cable (per metre)", "userPrice":4440, "dealerPrice":4440},
+      {"id":"dcCable25mm", "key":"dcCable25mm", "label":"25mm DC Cable (per metre)", "userPrice":6000, "dealerPrice":6000},
     ]},
-    { brand:'Solar Mounting', items:[
-      { id:'sm1', label:'6mm Solar Cable',      dealerPrice:4500  },
-      { id:'sm2', label:'Solar Rail',           dealerPrice:7500  },
-      { id:'sm3', label:'Mid/End Clamp',        dealerPrice:600   },
-      { id:'sm4', label:'MC4 Connector Single', dealerPrice:2000  },
-      { id:'sm5', label:'MC4 Connector 2-1',    dealerPrice:8000  },
-      { id:'sm6', label:'MC4 Connector 3-1',    dealerPrice:18000 },
-      { id:'sm7', label:'MC4 Connector 4-1',    dealerPrice:25000 },
-      { id:'sm8', label:'Flash Band',           dealerPrice:5000  },
+    { brand:"Protective Breakers", items:[
+      {"id":"dcBreaker60", "key":"dcBreaker60", "label":"DC Breaker 40A / 60A", "userPrice":12000, "dealerPrice":12000},
+      {"id":"box4way", "key":"box4way", "label":"4-Way Enclosure Box", "userPrice":4200, "dealerPrice":4200},
+      {"id":"mccb125", "key":"mccb125", "label":"MCCB 125A", "userPrice":36000, "dealerPrice":36000},
+      {"id":"mccb250", "key":"mccb250", "label":"MCCB 250A", "userPrice":42000, "dealerPrice":42000},
+      {"id":"mccbBox", "key":"mccbBox", "label":"MCCB Enclosure Box", "userPrice":14400, "dealerPrice":14400},
+      {"id":"pvBreaker", "key":"pvBreaker", "label":"PV Breaker 1000V 2P", "userPrice":14400, "dealerPrice":14400},
+      {"id":"acSurge1p", "key":"acSurge1p", "label":"AC Surge Breaker 1-Phase 385V", "userPrice":12000, "dealerPrice":12000},
+      {"id":"acSurge4p", "key":"acSurge4p", "label":"AC Surge Breaker 4P 385V", "userPrice":24000, "dealerPrice":24000},
+      {"id":"dcSurge", "key":"dcSurge", "label":"DC Surge Breaker 120/450/800V", "userPrice":12000, "dealerPrice":12000},
+      {"id":"acBreaker2p", "key":"acBreaker2p", "label":"AC Breaker 2P", "userPrice":12000, "dealerPrice":12000},
+      {"id":"acBreaker4p", "key":"acBreaker4p", "label":"AC Breaker 4P", "userPrice":30000, "dealerPrice":30000},
+      {"id":"enclosure12", "key":"enclosure12", "label":"12-Way Enclosure Box", "userPrice":12000, "dealerPrice":12000},
+      {"id":"bypass100", "key":"bypass100", "label":"By-pass Changeover 100A", "userPrice":12000, "dealerPrice":12000},
+      {"id":"bypass200", "key":"bypass200", "label":"By-pass Changeover 200A", "userPrice":36000, "dealerPrice":36000},
     ]},
-    { brand:'Battery Kit', items:[
-      { id:'bk1', label:'25mm DC Cable',         dealerPrice:7000   },
-      { id:'bk2', label:'Battery Rack (2 batt)', dealerPrice:20000  },
-      { id:'bk3', label:'Battery Rack (4 batt)', dealerPrice:25000  },
-      { id:'bk4', label:'Battery Bus Bar',       dealerPrice:150000 },
+    { brand:"Solar Mounting", items:[
+      {"id":"midClampLight", "key":"midClampLight", "label":"Mid Clamp (light)", "userPrice":600, "dealerPrice":600},
+      {"id":"lClamp", "key":"lClamp", "label":"L Clamp", "userPrice":600, "dealerPrice":600},
+      {"id":"midClampThick", "key":"midClampThick", "label":"Mid Clamp (thick)", "userPrice":3000, "dealerPrice":3000},
+      {"id":"endClampThick", "key":"endClampThick", "label":"End Clamp (thick)", "userPrice":3000, "dealerPrice":3000},
+      {"id":"mc4_2to1", "key":"mc4_2to1", "label":"MC4 2-to-1", "userPrice":10800, "dealerPrice":10800},
+      {"id":"mc4Single", "key":"mc4Single", "label":"MC4 Single", "userPrice":1800, "dealerPrice":1800},
+      {"id":"mc4_3to1", "key":"mc4_3to1", "label":"MC4 3-to-1", "userPrice":13200, "dealerPrice":13200},
+      {"id":"mc4_4to1", "key":"mc4_4to1", "label":"MC4 4-to-1", "userPrice":16560, "dealerPrice":16560},
+      {"id":"solarRail", "key":"solarRail", "label":"Solar Rail", "userPrice":7200, "dealerPrice":7200},
+      {"id":"smRail34", "key":"smRail34", "label":"SM Rail 3.4m", "userPrice":36000, "dealerPrice":36000},
+      {"id":"smRail44", "key":"smRail44", "label":"SM Rail 4.4m", "userPrice":48000, "dealerPrice":48000},
+      {"id":"flashBand", "key":"flashBand", "label":"Flash Band", "userPrice":6000, "dealerPrice":6000},
+    ]},
+    { brand:"Battery Kit", items:[
+      {"id":"trunkPipe", "key":"trunkPipe", "label":"Trunk Pipe", "userPrice":3000, "dealerPrice":3000},
+      {"id":"rack2", "key":"rack2", "label":"Battery Rack (2 batteries)", "userPrice":19200, "dealerPrice":19200},
+      {"id":"rack4", "key":"rack4", "label":"Battery Rack (4 batteries)", "userPrice":24000, "dealerPrice":24000},
+      {"id":"cableLug", "key":"cableLug", "label":"Cable Lug", "userPrice":600, "dealerPrice":600},
+      {"id":"deyeHvRack", "key":"deyeHvRack", "label":"Deye HV Battery 3U Rack (12 unit)", "userPrice":592620, "dealerPrice":564400},
+      {"id":"deyeHvBos", "key":"deyeHvBos", "label":"Deye HV Battery BOS (13 unit)", "userPrice":621148, "dealerPrice":591570},
+    ]},
+    { brand:"Parallel Inverter Kit", items:[
+      {"id":"acPanelBox", "key":"acPanelBox", "label":"AC Panel Box", "userPrice":450000, "dealerPrice":450000},
+      {"id":"dcPanelBox", "key":"dcPanelBox", "label":"DC Panel Box", "userPrice":450000, "dealerPrice":450000},
+      {"id":"busBarBox", "key":"busBarBox", "label":"Battery Bus Bar Box", "userPrice":90000, "dealerPrice":90000},
+    ]},
+    { brand:"Other Products", items:[
+      {"id":"dcFan", "key":"dcFan", "label":"Solar / DC Fan", "userPrice":65000, "dealerPrice":65000},
+      {"id":"sgDc20", "key":"sgDc20", "label":"DC Solar Power System (20W panel, 108Wh)", "userPrice":89800, "dealerPrice":89800},
+      {"id":"sg300", "key":"sg300", "label":"Solar Generator 300W / 360Wh with panel", "userPrice":310000, "dealerPrice":310000},
+      {"id":"sg500", "key":"sg500", "label":"Solar Generator 500W / 720Wh with panel", "userPrice":430000, "dealerPrice":430000},
+      {"id":"sg1000", "key":"sg1000", "label":"Solar Generator 1000W / 1024Wh with panel", "userPrice":630400, "dealerPrice":630400},
+      {"id":"sgItel600", "key":"sgItel600", "label":"Itel 600W / 512Wh Solar Generator with panel", "userPrice":655600, "dealerPrice":655600},
     ]},
   ],
 };
@@ -3525,134 +3617,83 @@ function renderCatalog() {
   const catalog = getCatalog();
   const tab = _catalogTab;
   const brands = catalog[tab] || [];
-  const fmt = n => Math.round(n||0).toLocaleString('en-NG');
-
-  let html = '';
-
   const cur = getActiveCurrency();
   const curCode = cur.code;
 
+  // Editable cells. Prices are stored in NGN; the preview shows the active currency.
+  const txt = (bi, ii, field, val, w) =>
+    `<input class="catalog-inp" style="width:${w}px" value="${String(val ?? '').replace(/"/g, '&quot;')}" oninput="updateCatalogItem('${tab}',${bi},${ii},'${field}',this.value)">`;
+  const num = (bi, ii, field, val, w, step) =>
+    `<input class="catalog-inp" type="number" style="width:${w}px" value="${val ?? 0}"${step ? ` step="${step}"` : ''} onchange="catalogBlur('${tab}',${bi},${ii},'${field}',this.value)">`;
+  const money = (bi, ii, field, val) =>
+    `<input class="catalog-inp" type="number" style="width:110px" value="${val || 0}" data-tab="${tab}" data-bi="${bi}" data-ii="${ii}" data-field="${field}" onchange="catalogBlur('${tab}',${bi},${ii},'${field}',this.value)" title="Enter the price in NGN — shown in ${curCode}"><br><span style="font-size:10px;color:var(--text3)"><span class="catalog-price-preview">${fmtCur(val || 0)}</span></span>`;
+  const yesNo = (bi, ii, field, val) =>
+    `<select class="catalog-inp" style="width:64px" onchange="catalogBlur('${tab}',${bi},${ii},'${field}',this.value)"><option value="yes"${val !== 'no' ? ' selected' : ''}>Yes</option><option value="no"${val === 'no' ? ' selected' : ''}>No</option></select>`;
+  const chemSel = (bi, ii, val) =>
+    `<select class="catalog-inp" style="width:86px" onchange="catalogBlur('${tab}',${bi},${ii},'chem',this.value)">${['lithium','agm','gel','tubular'].map(c => `<option value="${c}"${c === val ? ' selected' : ''}>${c === 'agm' ? 'AGM' : c[0].toUpperCase() + c.slice(1)}</option>`).join('')}</select>`;
+  const del = (bi, ii) => `<td><button class="catalog-del-btn" onclick="deleteCatalogItem('${tab}',${bi},${ii})">✕</button></td>`;
+  const prices = `<th>Dealer Price (${curCode})</th><th>User Price (${curCode})</th>`;
+
+  let headers, rowFn;
+  if (tab === 'panels') {
+    headers = `<th>Model</th><th>Watts</th><th>Voc (V)</th><th>Isc (A)</th>${prices}<th></th>`;
+    rowFn = (bi) => (item, ii) => `<tr>
+      <td>${txt(bi, ii, 'label', item.label, 170)}</td><td>${num(bi, ii, 'watt', item.watt, 64)}</td>
+      <td>${num(bi, ii, 'voc', item.voc, 64, 0.01)}</td><td>${num(bi, ii, 'isc', item.isc, 60, 0.01)}</td>
+      <td>${money(bi, ii, 'dealerPrice', item.dealerPrice)}</td><td>${money(bi, ii, 'userPrice', item.userPrice)}</td>${del(bi, ii)}</tr>`;
+  } else if (tab === 'batteries') {
+    headers = `<th>Model</th><th>Type</th><th>Ah</th><th>Volts</th><th>DoD</th>${prices}<th></th>`;
+    rowFn = (bi) => (item, ii) => `<tr>
+      <td>${txt(bi, ii, 'label', item.label, 190)}</td><td>${chemSel(bi, ii, item.chem || (item.type === 'lead' ? 'agm' : 'lithium'))}</td>
+      <td>${num(bi, ii, 'ah', item.ah, 60)}</td><td>${num(bi, ii, 'volt', item.volt, 56)}</td><td>${num(bi, ii, 'dod', item.dod ?? 0.8, 56, 0.05)}</td>
+      <td>${money(bi, ii, 'dealerPrice', item.dealerPrice)}</td><td>${money(bi, ii, 'userPrice', item.userPrice)}</td>${del(bi, ii)}</tr>`;
+  } else if (tab === 'inverters') {
+    headers = `<th>Model</th><th>kW</th><th>Batt V</th><th>Phase</th><th>Eff.</th><th>PV max (kW)</th><th>PV max V</th><th>MPPT A</th><th>MPPTs</th><th>Parallel</th><th>Max //</th>${prices}<th></th>`;
+    rowFn = (bi) => (item, ii) => `<tr>
+      <td>${txt(bi, ii, 'label', item.label, 190)}</td><td>${num(bi, ii, 'kw', item.kw, 54, 0.1)}</td>
+      <td>${num(bi, ii, 'volt', item.volt, 54)}</td><td>${num(bi, ii, 'phase', item.phase || 1, 44)}</td>
+      <td>${num(bi, ii, 'eff', item.eff ?? 0.8, 54, 0.05)}</td><td>${num(bi, ii, 'pvInput', item.pvInput, 64, 0.1)}</td>
+      <td>${num(bi, ii, 'pvMaxV', item.pvMaxV, 58)}</td><td>${num(bi, ii, 'mpptMaxA', item.mpptMaxA, 54, 0.1)}</td>
+      <td>${num(bi, ii, 'mpptNo', item.mpptNo || 1, 44)}</td><td>${yesNo(bi, ii, 'parallel', item.parallel)}</td>
+      <td>${num(bi, ii, 'maxParallel', item.maxParallel || 1, 44)}</td>
+      <td>${money(bi, ii, 'dealerPrice', item.dealerPrice)}</td><td>${money(bi, ii, 'userPrice', item.userPrice)}</td>${del(bi, ii)}</tr>`;
+  } else {
+    headers = `<th>Item</th>${prices}<th></th>`;
+    rowFn = (bi) => (item, ii) => `<tr>
+      <td>${txt(bi, ii, 'label', item.label, 240)}</td>
+      <td>${money(bi, ii, 'dealerPrice', item.dealerPrice)}</td><td>${money(bi, ii, 'userPrice', item.userPrice)}</td>${del(bi, ii)}</tr>`;
+  }
+
+  const field = (bi, f, label, ph, w, type) =>
+    `<div><div class="catalog-add-label">${label}</div><input class="catalog-inp"${type ? ' type="number"' : ''} id="add-${bi}-${f}" placeholder="${ph}" style="width:${w}px"></div>`;
+  const addFields = {
+    panels:      bi => field(bi, 'label', 'Model', 'e.g. Jinko 650W', 130) + field(bi, 'watt', 'Watts', '650', 64, 1) + field(bi, 'voc', 'Voc', '50', 56, 1) + field(bi, 'isc', 'Isc', '14', 56, 1),
+    batteries:   bi => field(bi, 'label', 'Model', 'e.g. 200Ah 48V', 130) + field(bi, 'ah', 'Ah', '200', 60, 1) + field(bi, 'volt', 'Volts', '48', 56, 1) + field(bi, 'dod', 'DoD', '0.8', 56, 1),
+    inverters:   bi => field(bi, 'label', 'Model', 'e.g. 8kW 48V', 120) + field(bi, 'kw', 'kW', '8', 54, 1) + field(bi, 'volt', 'Batt V', '48', 54, 1) + field(bi, 'pvInput', 'PV kW', '8', 54, 1) + field(bi, 'pvMaxV', 'PV V', '500', 54, 1) + field(bi, 'mpptMaxA', 'MPPT A', '27', 54, 1) + field(bi, 'mpptNo', 'MPPTs', '2', 48, 1) + field(bi, 'maxParallel', 'Max //', '1', 48, 1),
+    accessories: bi => field(bi, 'label', 'Item Name', 'e.g. DC Breaker 63A', 180),
+  };
+
+  let html = '';
   brands.forEach((brand, bi) => {
-    // Column headers per tab type
-    let headers, rowFn;
-    if (tab === 'panels') {
-      headers = `<th>Brand Name</th><th>Wattage (W)</th><th>Base Price (${curCode})</th><th>Dealer Price (${curCode})</th><th>User Price (+10%) (${curCode})</th><th></th>`;
-      rowFn = (item, ii) => `
-        <tr>
-          <td><input class="catalog-inp" style="width:130px" value="${item.label||brand.brand}" oninput="updateCatalogItem('${tab}',${bi},${ii},'label',this.value)" placeholder="${brand.brand}"></td>
-          <td><input class="catalog-inp" type="number" style="width:80px" value="${item.watt||0}" onchange="catalogBlur('${tab}',${bi},${ii},'watt',this.value)"></td>
-          <td><input class="catalog-inp" type="number" style="width:120px" value="${item.dealerPrice}" data-tab="${tab}" data-bi="${bi}" data-ii="${ii}" data-field="dealerPrice" onchange="catalogBlur(\'${tab}\',${bi},${ii},\'dealerPrice\',this.value)" title="Enter base price in NGN — displays in ${curCode}"><br><span style="font-size:10px;color:var(--text3)"><span class="catalog-price-preview">${fmtCur(item.dealerPrice)}</span></span></td>
-          <td style="font-weight:600;color:var(--text)">${fmtCur(item.dealerPrice)}</td>
-          <td class="catalog-user-price">${fmtCur(Math.round(item.dealerPrice * 1.1))}</td>
-          <td><button class="catalog-del-btn" onclick="deleteCatalogItem('${tab}',${bi},${ii})">✕</button></td>
-        </tr>`;
-    } else if (tab === 'batteries') {
-      headers = `<th>Variant</th><th>Ah</th><th>Voltage (V)</th><th>Base Price (${curCode})</th><th>Dealer Price (${curCode})</th><th>User Price (+10%) (${curCode})</th><th></th>`;
-      rowFn = (item, ii) => `
-        <tr>
-          <td><input class="catalog-inp" style="width:130px" value="${item.label||brand.brand}" oninput="updateCatalogItem('${tab}',${bi},${ii},'label',this.value)" placeholder="${brand.brand}"></td>
-          <td><input class="catalog-inp" type="number" style="width:70px" value="${item.ah}" onchange="catalogBlur('${tab}',${bi},${ii},'ah',this.value)"></td>
-          <td><input class="catalog-inp" type="number" style="width:70px" value="${item.volt}" onchange="catalogBlur('${tab}',${bi},${ii},'volt',this.value)"></td>
-          <td><input class="catalog-inp" type="number" style="width:120px" value="${item.dealerPrice}" data-tab="${tab}" data-bi="${bi}" data-ii="${ii}" data-field="dealerPrice" onchange="catalogBlur(\'${tab}\',${bi},${ii},\'dealerPrice\',this.value)" title="Enter base price in NGN — displays in ${curCode}"><br><span style="font-size:10px;color:var(--text3)"><span class="catalog-price-preview">${fmtCur(item.dealerPrice)}</span></span></td>
-          <td style="font-weight:600;color:var(--text)">${fmtCur(item.dealerPrice)}</td>
-          <td class="catalog-user-price">${fmtCur(Math.round(item.dealerPrice * 1.1))}</td>
-          <td><button class="catalog-del-btn" onclick="deleteCatalogItem('${tab}',${bi},${ii})">✕</button></td>
-        </tr>`;
-    } else if (tab === 'inverters') {
-      headers = `<th>Brand / Model</th><th>kW</th><th>Voltage (V)</th><th>PV Input (kW)</th><th>MPPT No.</th><th>MPPT</th><th>Parallel</th><th>Max Parallel</th><th>Base Price (${curCode})</th><th>Dealer Price (${curCode})</th><th>User Price (+10%) (${curCode})</th><th></th>`;
-      rowFn = (item, ii) => `
-        <tr>
-          <td><input class="catalog-inp" style="width:120px" value="${item.label||brand.brand}" oninput="updateCatalogItem('${tab}',${bi},${ii},'label',this.value)" placeholder="${brand.brand}"></td>
-          <td><input class="catalog-inp" type="number" style="width:60px" value="${item.kw}" onchange="catalogBlur('${tab}',${bi},${ii},'kw',this.value)"></td>
-          <td><input class="catalog-inp" type="number" style="width:60px" value="${item.volt}" onchange="catalogBlur('${tab}',${bi},${ii},'volt',this.value)"></td>
-          <td><input class="catalog-inp" type="number" style="width:70px" value="${item.pvInput||0}" onchange="catalogBlur('${tab}',${bi},${ii},'pvInput',this.value)" placeholder="0"></td>
-          <td><input class="catalog-inp" type="number" style="width:60px" value="${item.mpptNo||1}" onchange="catalogBlur('${tab}',${bi},${ii},'mpptNo',this.value)" placeholder="1" min="1"></td>
-          <td>
-            <select class="catalog-inp" style="width:68px" onchange="catalogBlur('${tab}',${bi},${ii},'hasMppt',this.value)">
-              <option value="yes" ${(item.hasMppt||'yes')==='yes'?'selected':''}>Yes</option>
-              <option value="no"  ${item.hasMppt==='no'?'selected':''}>No</option>
-            </select>
-          </td>
-          <td>
-            <select class="catalog-inp" style="width:68px" onchange="catalogBlur('${tab}',${bi},${ii},'parallel',this.value)">
-              <option value="yes" ${(item.parallel||'yes')==='yes'?'selected':''}>Yes</option>
-              <option value="no"  ${item.parallel==='no'?'selected':''}>No</option>
-            </select>
-          </td>
-          <td><input class="catalog-inp" type="number" style="width:60px" value="${item.maxParallel||2}" onchange="catalogBlur('${tab}',${bi},${ii},'maxParallel',this.value)" placeholder="2" min="1"></td>
-          <td><input class="catalog-inp" type="number" style="width:100px" value="${item.dealerPrice}" data-tab="${tab}" data-bi="${bi}" data-ii="${ii}" data-field="dealerPrice" onchange="catalogBlur(\'${tab}\',${bi},${ii},\'dealerPrice\',this.value)" title="Enter base price in NGN — displays in ${curCode}"><br><span style="font-size:10px;color:var(--text3)"><span class="catalog-price-preview">${fmtCur(item.dealerPrice)}</span></span></td>
-          <td style="font-weight:600;color:var(--text)">${fmtCur(item.dealerPrice)}</td>
-          <td class="catalog-user-price">${fmtCur(Math.round(item.dealerPrice * 1.1))}</td>
-          <td><button class="catalog-del-btn" onclick="deleteCatalogItem('${tab}',${bi},${ii})">✕</button></td>
-        </tr>`;
-    } else {
-      // Accessories — label + price only
-      headers = `<th>Item</th><th>Base Price (${curCode})</th><th>Dealer Price (${curCode})</th><th>User Price (+10%) (${curCode})</th><th></th>`;
-      rowFn = (item, ii) => `
-        <tr>
-          <td><input class="catalog-inp" style="width:220px" value="${item.label}" oninput="updateCatalogItem('${tab}',${bi},${ii},'label',this.value)"></td>
-          <td><input class="catalog-inp" type="number" style="width:120px" value="${item.dealerPrice}" data-tab="${tab}" data-bi="${bi}" data-ii="${ii}" data-field="dealerPrice" onchange="catalogBlur(\'${tab}\',${bi},${ii},\'dealerPrice\',this.value)" title="Enter base price in NGN — displays in ${curCode}"><br><span style="font-size:10px;color:var(--text3)"><span class="catalog-price-preview">${fmtCur(item.dealerPrice)}</span></span></td>
-          <td style="font-weight:600;color:var(--text)">${fmtCur(item.dealerPrice)}</td>
-          <td class="catalog-user-price">${fmtCur(Math.round(item.dealerPrice * 1.1))}</td>
-          <td><button class="catalog-del-btn" onclick="deleteCatalogItem('${tab}',${bi},${ii})">✕</button></td>
-        </tr>`;
-    }
-
-    // Add-item row inputs per tab
-    let addRow = '';
-    if (tab === 'panels') {
-      addRow = `
-        <div class="catalog-add-row">
-          <div><div class="catalog-add-label">Brand Name</div><input class="catalog-inp" id="add-${bi}-label" placeholder="e.g. Jinko 650W" style="width:120px"></div>
-          <div><div class="catalog-add-label">Watts</div><input class="catalog-inp" type="number" id="add-${bi}-watt" placeholder="650" style="width:70px"></div>
-          <div><div class="catalog-add-label">Dealer Price</div><input class="catalog-inp" type="number" id="add-${bi}-price" placeholder="150000" style="width:120px"></div>
-          <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;align-self:flex-end" onclick="addCatalogItem('${tab}',${bi})">+ Add</button>
-        </div>`;
-    } else if (tab === 'batteries') {
-      addRow = `
-        <div class="catalog-add-row">
-          <div><div class="catalog-add-label">Variant</div><input class="catalog-inp" id="add-${bi}-label" placeholder="e.g. 200Ah 48V" style="width:110px"></div>
-          <div><div class="catalog-add-label">Ah</div><input class="catalog-inp" type="number" id="add-${bi}-ah" placeholder="200" style="width:70px"></div>
-          <div><div class="catalog-add-label">Volts</div><input class="catalog-inp" type="number" id="add-${bi}-volt" placeholder="48" style="width:70px"></div>
-          <div><div class="catalog-add-label">Dealer Price</div><input class="catalog-inp" type="number" id="add-${bi}-price" placeholder="1500000" style="width:120px"></div>
-          <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;align-self:flex-end" onclick="addCatalogItem('${tab}',${bi})">+ Add</button>
-        </div>`;
-    } else if (tab === 'inverters') {
-      addRow = `
-        <div class="catalog-add-row">
-          <div><div class="catalog-add-label">Brand / Model</div><input class="catalog-inp" id="add-${bi}-label" placeholder="${brand.brand}" style="width:100px" value="${brand.brand}"></div>
-          <div><div class="catalog-add-label">kW</div><input class="catalog-inp" type="number" id="add-${bi}-kw" placeholder="8" style="width:55px"></div>
-          <div><div class="catalog-add-label">Volts</div><input class="catalog-inp" type="number" id="add-${bi}-volt" placeholder="48" style="width:55px"></div>
-          <div><div class="catalog-add-label">PV (kW)</div><input class="catalog-inp" type="number" id="add-${bi}-pvInput" placeholder="0" style="width:55px"></div>
-          <div><div class="catalog-add-label">MPPT No.</div><input class="catalog-inp" type="number" id="add-${bi}-mpptNo" placeholder="1" style="width:50px" min="1"></div>
-          <div><div class="catalog-add-label">MPPT</div><select class="catalog-inp" id="add-${bi}-hasMppt" style="width:65px"><option value="yes">Yes</option><option value="no">No</option></select></div>
-          <div><div class="catalog-add-label">Parallel</div><select class="catalog-inp" id="add-${bi}-parallel" style="width:65px"><option value="yes">Yes</option><option value="no">No</option></select></div>
-          <div><div class="catalog-add-label">Max //</div><input class="catalog-inp" type="number" id="add-${bi}-maxParallel" placeholder="2" style="width:50px" min="1"></div>
-          <div><div class="catalog-add-label">Dealer Price</div><input class="catalog-inp" type="number" id="add-${bi}-price" placeholder="1500000" style="width:100px"></div>
-          <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;align-self:flex-end" onclick="addCatalogItem('${tab}',${bi})">+ Add</button>
-        </div>`;
-    } else {
-      // Accessories add row
-      addRow = `
-        <div class="catalog-add-row">
-          <div><div class="catalog-add-label">Item Name</div><input class="catalog-inp" id="add-${bi}-label" placeholder="e.g. DC Breaker 63A" style="width:180px"></div>
-          <div><div class="catalog-add-label">Dealer Price</div><input class="catalog-inp" type="number" id="add-${bi}-price" placeholder="9000" style="width:120px"></div>
-          <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;align-self:flex-end" onclick="addCatalogItem('${tab}',${bi})">+ Add</button>
-        </div>`;
-    }
-
+    const addRow = `
+      <div class="catalog-add-row">
+        ${addFields[tab](bi)}
+        <div><div class="catalog-add-label">Dealer Price</div><input class="catalog-inp" type="number" id="add-${bi}-price" placeholder="0" style="width:110px"></div>
+        <div><div class="catalog-add-label">User Price</div><input class="catalog-inp" type="number" id="add-${bi}-userPrice" placeholder="dealer + 5%" style="width:110px"></div>
+        <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;align-self:flex-end" onclick="addCatalogItem('${tab}',${bi})">+ Add</button>
+      </div>`;
     html += `
       <div class="catalog-brand card" style="padding:0;overflow:hidden;margin-bottom:20px">
         <div class="catalog-brand-header">
           <div>
             <div class="catalog-brand-name">${brand.brand}</div>
-            <div class="catalog-brand-sub">${brand.items.length} products · Prices shown in ${curCode} · Input field stores NGN base price</div>
+            <div class="catalog-brand-sub">${brand.items.length} products · Quotes use the user price · Prices entered in NGN, shown in ${curCode}</div>
           </div>
         </div>
         <div style="overflow-x:auto">
         <table class="catalog-table">
           <thead><tr>${headers}</tr></thead>
-          <tbody>${brand.items.map(rowFn).join('')}</tbody>
+          <tbody>${brand.items.map(rowFn(bi)).join('')}</tbody>
         </table>
         </div>
         ${addRow}
@@ -3667,16 +3708,13 @@ function updateCatalogItem(tab, bi, ii, field, val) {
   const catalog = getCatalog();
   const item = catalog[tab][bi].items[ii];
   if (!item) return;
-  item[field] = (['label'].includes(field)) ? val : (parseFloat(val) || 0);
+  item[field] = (['label', 'parallel', 'chem'].includes(field)) ? val : (parseFloat(val) || 0);
+  if (field === 'chem') item.type = val === 'lithium' ? 'lithium' : 'lead';
+  if (field === 'ah' || field === 'volt') item.kwh = Math.round((item.ah || 0) * (item.volt || 0) / 10) / 100;
   state.catalog = catalog;
-  // Only re-render for label changes (won't disrupt focus)
-  // For number fields, just update the converted price preview inline
-  if (['label'].includes(field)) {
-    renderCatalog();
-  } else {
-    // Update just the converted price span next to this input without full re-render
-    const inputs = document.querySelectorAll('.catalog-inp[data-tab="'+tab+'"][data-bi="'+bi+'"][data-ii="'+ii+'"][data-field="dealerPrice"]');
-    inputs.forEach(inp => {
+  // Number fields: refresh just the currency preview so typing isn't interrupted
+  if (field === 'dealerPrice' || field === 'userPrice') {
+    document.querySelectorAll('.catalog-inp[data-tab="'+tab+'"][data-bi="'+bi+'"][data-ii="'+ii+'"][data-field="'+field+'"]').forEach(inp => {
       const preview = inp.parentElement.querySelector('.catalog-price-preview');
       if (preview) preview.textContent = fmtCur(parseFloat(inp.value)||0);
     });
@@ -3697,28 +3735,24 @@ function deleteCatalogItem(tab, bi, ii) {
 
 function addCatalogItem(tab, bi) {
   const catalog = getCatalog();
-  const label = document.getElementById(`add-${bi}-label`)?.value?.trim();
-  const price = parseFloat(document.getElementById(`add-${bi}-price`)?.value) || 0;
-  if (!label || !price) { showToast('Enter variant name and price', 'warn'); return; }
+  const v = f => document.getElementById(`add-${bi}-${f}`)?.value?.trim();
+  const n = (f, d) => { const x = parseFloat(v(f)); return isNaN(x) ? d : x; };
+  const label = v('label');
+  const dealerPrice = n('price', 0);
+  const userPrice = n('userPrice', Math.round(dealerPrice * 1.05));
+  if (!label || !(dealerPrice || userPrice)) { showToast('Enter a name and a price', 'warn'); return; }
 
-  let item = { id: 'u' + Date.now(), label, dealerPrice: price };
+  const item = { id: 'u' + Date.now(), label, dealerPrice, userPrice };
   if (tab === 'panels') {
-    item.watt = parseFloat(document.getElementById(`add-${bi}-watt`)?.value) || 0;
+    Object.assign(item, { watt: n('watt', 0), voc: n('voc', 50), isc: n('isc', 14) });
   } else if (tab === 'batteries') {
-    item.ah   = parseFloat(document.getElementById(`add-${bi}-ah`)?.value)   || 0;
-    item.volt = parseFloat(document.getElementById(`add-${bi}-volt`)?.value) || 0;
-    item.kwh  = null;
+    Object.assign(item, { ah: n('ah', 0), volt: n('volt', 48), dod: n('dod', 0.8), chem: 'lithium', type: 'lithium' });
+    item.kwh = Math.round(item.ah * item.volt / 10) / 100;
   } else if (tab === 'inverters') {
-    item.kw          = parseFloat(document.getElementById(`add-${bi}-kw`)?.value)          || 0;
-    item.volt        = parseFloat(document.getElementById(`add-${bi}-volt`)?.value)        || 0;
-    item.pvInput     = parseFloat(document.getElementById(`add-${bi}-pvInput`)?.value)     || 0;
-    item.mpptNo      = parseInt(document.getElementById(`add-${bi}-mpptNo`)?.value)        || 1;
-    item.hasMppt     = document.getElementById(`add-${bi}-hasMppt`)?.value                || 'yes';
-    item.parallel    = document.getElementById(`add-${bi}-parallel`)?.value               || 'yes';
-    item.maxParallel = parseInt(document.getElementById(`add-${bi}-maxParallel`)?.value)   || 2;
+    Object.assign(item, { kw: n('kw', 0), volt: n('volt', 48), phase: 1, eff: 0.8, pvInput: n('pvInput', 0), pvMaxV: n('pvMaxV', 500),
+      mpptMaxA: n('mpptMaxA', 27), mpptNo: n('mpptNo', 1), hasMppt: 'yes', maxParallel: n('maxParallel', 1) });
+    item.parallel = item.maxParallel > 1 ? 'yes' : 'no';
   }
-  // accessories: just label + price, no extra fields
-
   catalog[tab][bi].items.push(item);
   state.catalog = catalog;
   renderCatalog();
@@ -3746,6 +3780,22 @@ function resetPrices() { resetCatalog(); }
 // ============================================================
 // SETTINGS
 // ============================================================
+// Fill a <select> with catalog items grouped by brand
+function fillCatalogSelect(id, tab, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = (getCatalog()[tab] || []).map(b =>
+    `<optgroup label="${b.brand}">${b.items.map(it => `<option value="${it.id}">${it.label}</option>`).join('')}</optgroup>`).join('');
+  el.value = value;
+}
+function fillBrandSelect(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = (getCatalog().inverters || []).map(b => `<option value="${b.brand}">${b.brand}</option>`).join('');
+  el.value = value;
+  if (!el.value && el.options.length) el.selectedIndex = 0;
+}
+
 function populateSettingsForm() {
   const co = state.company;
   const cfg = state.config;
@@ -3764,42 +3814,32 @@ function populateSettingsForm() {
       SAR:'King Fahd Road, Riyadh',         INR:'8 MG Road, Bangalore',
       EUR:'12 Rue de Rivoli, Paris',
     };
-    addrEl.placeholder = ADDRESS_BY_CURRENCY[co.currency||'USD'] || '123 Main Street';
+    addrEl.placeholder = ADDRESS_BY_CURRENCY[co.currency||'NGN'] || '123 Main Street';
   }
   s('co-phone',              co.phone||'');
   s('co-email',              co.email||'');
   s('co-web',                co.web||'');
   populateCurrencyDropdown();
-  s('cfg-sun',               cfg.sunHours||4.5);
-  s('cfg-install',           (cfg.installPct||0.12)*100);
-  s('cfg-dod',               cfg.dodLithium||1.25);
-  s('cfg-dod-la',            cfg.dodLead||2.0);
-  s('cfg-batt-voltage',      cfg.battVoltage||48);
-  s('cfg-batt-dod',          cfg.battDod||0.80);
-  s('cfg-batt-eff',          cfg.battEfficiency||0.95);
-  s('cfg-indiv-batt-ah',     cfg.individualBattAh||200);
-  s('cfg-panel-w',           cfg.individualPanelW||400);
-  s('cfg-energy-used-pct',   Math.round((cfg.panelDerate||0.80)*100));
-  s('cfg-battery-type',      cfg.batteryType||'lithium');
-  s('cfg-battery-brand',     cfg.batteryBrand||'Itel');
-  s('cfg-panel-brand',       cfg.panelBrand||'Jinko Solar');
-  s('cfg-inverter-brand',    cfg.inverterBrand||'Growatt');
-  s('cfg-inv-brand',         cfg.invBrand||'Growatt');
-  s('cfg-markup',            cfg.markup||20);
-  s('cfg-inv-eff',           cfg.inverterEfficiency||1.25);
-  s('cfg-selected-inv-kva',  cfg.selectedInverterKVA||0);
-  s('cfg-inv-std-sizes',     (cfg.inverterStandardSizes || [1,1.5,2,3,5,7.5,10,15,20]).join(', '));
-  s('cfg-inv-voltage',       cfg.inverterVoltage||48);
-  s('cfg-days-autonomy',     cfg.daysOfAutonomy||1);
-  s('cfg-cabling-mode',      cfg.cablingMode||'flat');
-  s('cfg-cabling-per-kva',   cfg.cablingPerKVA||15000);
-  s('cfg-mounting-mode',     cfg.mountingMode||'flat');
-  s('cfg-mounting-per-panel',cfg.mountingPerPanel||8000);
-  s('cfg-accessories-mode',  cfg.accessoriesMode||'flat');
-  s('cfg-accessories-per-kva',cfg.accessoriesPerKVA||8000);
+  const brand = cfg.invBrand || cfg.inverterBrand || 'Growatt';
+  fillBrandSelect('cfg-inverter-brand', brand);
+  fillBrandSelect('cfg-inv-brand',      brand);
+  fillCatalogSelect('cfg-default-battery', 'batteries', cfg.defaultBatteryId || 'itb200');
+  fillCatalogSelect('cfg-default-panel',   'panels',    cfg.defaultPanelId   || 'jk615');
+  s('cfg-markup',            cfg.markup ?? 0);
+  s('cfg-days-autonomy',     cfg.daysOfAutonomy || 1);
+  s('cfg-sun',               cfg.sunHours || 5);
+  s('cfg-energy-used-pct',   Math.round((cfg.panelDerate || 0.80) * 100));
+  s('cfg-charge-loss',       Math.round((cfg.chargeLoss ?? 0.50) * 100));
+  s('cfg-system-loss',       Math.round((cfg.systemLoss ?? 0.20) * 100));
+  s('cfg-power-factor',      cfg.powerFactor || 0.80);
+  s('cfg-install',           +((cfg.installPct ?? 0.08) * 100).toFixed(2));
+  s('cfg-logistics',         Math.round((cfg.logistics || 0) * (getActiveCurrency().rate || 1)));
+  const lu = document.getElementById('lbl-cfg-logistics-unit');
+  if (lu) lu.textContent = getActiveCurrency().code;
 }
 
 function saveSettings() {
+  const num = (id, dflt) => { const v = parseFloat(document.getElementById(id)?.value); return isNaN(v) ? dflt : v; };
   state.company = {
     name:     document.getElementById('co-name').value,
     address:  document.getElementById('co-address').value,
@@ -3808,39 +3848,32 @@ function saveSettings() {
     web:      document.getElementById('co-web').value,
     currency: document.getElementById('co-currency').value || 'NGN',
   };
+  // Either brand picker can be the one that changed
+  const leftBrand  = document.getElementById('cfg-inverter-brand')?.value;
+  const rightBrand = document.getElementById('cfg-inv-brand')?.value;
+  const prevBrand  = state.config.invBrand || state.config.inverterBrand;
+  const brand = (rightBrand && rightBrand !== prevBrand) ? rightBrand : (leftBrand || rightBrand || prevBrand || 'Growatt');
+  const defaultBatteryId = document.getElementById('cfg-default-battery')?.value || state.config.defaultBatteryId;
+  const battery = SIQSizing.findItem(getCatalog(), 'batteries', defaultBatteryId);
   state.config = {
-    sunHours: parseFloat(document.getElementById('cfg-sun').value)||4.5,
-    installPct: (parseFloat(document.getElementById('cfg-install').value)||12)/100,
-    dodLithium: parseFloat(document.getElementById('cfg-dod').value)||1.25,
-    dodLead: parseFloat(document.getElementById('cfg-dod-la').value)||2.0,
-    battVoltage: parseFloat(document.getElementById('cfg-batt-voltage').value)||48,
-    battDod: parseFloat(document.getElementById('cfg-batt-dod').value)||0.80,
-    battEfficiency: parseFloat(document.getElementById('cfg-batt-eff').value)||0.95,
-    individualBattAh: parseFloat(document.getElementById('cfg-indiv-batt-ah').value)||200,
-    individualPanelW: parseFloat(document.getElementById('cfg-panel-w').value)||400,
-    panelDerate: Math.min(1, Math.max(0.5, (parseFloat(document.getElementById('cfg-energy-used-pct').value)||80) / 100)),
-    inverterEfficiency: parseFloat(document.getElementById('cfg-inv-eff').value)||1.25,
-    selectedInverterKVA: parseFloat(document.getElementById('cfg-selected-inv-kva').value)||0,
-    inverterStandardSizes: (document.getElementById('cfg-inv-std-sizes').value||'')
-      .split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n) && n > 0)
-      .sort((a,b) => a - b),
-    inverterVoltage: parseFloat(document.getElementById('cfg-inv-voltage').value)||48,
-    daysOfAutonomy: parseFloat(document.getElementById('cfg-days-autonomy').value)||1,
-    cablingMode: document.getElementById('cfg-cabling-mode').value||'flat',
-    cablingPerKVA: parseFloat(document.getElementById('cfg-cabling-per-kva').value)||15000,
-    mountingMode: document.getElementById('cfg-mounting-mode').value||'flat',
-    mountingPerPanel: parseFloat(document.getElementById('cfg-mounting-per-panel').value)||8000,
-    accessoriesMode: document.getElementById('cfg-accessories-mode').value||'flat',
-    accessoriesPerKVA: parseFloat(document.getElementById('cfg-accessories-per-kva').value)||8000,
-    batteryType:   document.getElementById('cfg-battery-type')?.value   || 'lithium',
-    batteryBrand:  document.getElementById('cfg-battery-brand')?.value  || 'Itel',
-    panelBrand:    document.getElementById('cfg-panel-brand')?.value    || 'Jinko Solar',
-    inverterBrand: document.getElementById('cfg-inverter-brand')?.value || 'Growatt',
-    invBrand:      document.getElementById('cfg-inv-brand')?.value      || 'Growatt',
-    markup:        parseFloat(document.getElementById('cfg-markup')?.value) || 20,
+    ...state.config,
+    invBrand: brand, inverterBrand: brand,
+    defaultBatteryId,
+    defaultPanelId: document.getElementById('cfg-default-panel')?.value || state.config.defaultPanelId,
+    batteryType: battery && battery.chem !== 'lithium' ? 'lead' : 'lithium',
+    markup:         Math.max(0, num('cfg-markup', 0)),
+    daysOfAutonomy: Math.max(0.1, num('cfg-days-autonomy', 1)),
+    sunHours:       Math.max(0.5, num('cfg-sun', 5)),
+    panelDerate:    Math.min(1, Math.max(0.5, num('cfg-energy-used-pct', 80) / 100)),
+    chargeLoss:     Math.max(0, num('cfg-charge-loss', 50) / 100),
+    systemLoss:     Math.max(0, num('cfg-system-loss', 20) / 100),
+    powerFactor:    Math.min(1, Math.max(0.5, num('cfg-power-factor', 0.8))),
+    installPct:     Math.max(0, num('cfg-install', 8) / 100),
+    logistics:      Math.max(0, num('cfg-logistics', 0)) / (getActiveCurrency().rate || 1),
   };
   // Sync hidden inputs on new-audit page so calc picks up new values immediately
   syncHiddenAuditInputs();
+  populateSettingsForm();
   saveToStorage();
   if (window.cloudSaveSettings) window.cloudSaveSettings(state.config, state.company, state.prices);
   recalculate();
@@ -3853,10 +3886,14 @@ function syncHiddenAuditInputs() {
   const pb = document.getElementById('panel-brand');
   const ib = document.getElementById('inverter-brand');
   const mk = document.getElementById('markup');
+  const ip = document.getElementById('install-pct');
+  const lg = document.getElementById('logistics-amt');
   if (bt) bt.value = cfg.batteryType   || 'lithium';
   if (pb) pb.value = cfg.panelBrand    || 'Jinko Solar';
   if (ib) ib.value = cfg.invBrand      || cfg.inverterBrand || 'Growatt';
-  if (mk) mk.value = cfg.markup        || 20;
+  if (mk) mk.value = cfg.markup        ?? 0;
+  if (ip) ip.value = +((cfg.installPct ?? 0.08) * 100).toFixed(2);
+  if (lg) lg.value = Math.round((cfg.logistics || 0) * (getActiveCurrency().rate || 1));
 }
 
 function exportData() {
@@ -4100,7 +4137,7 @@ function generateTieredQuote() {
           <div class="tier-spec-row"><span class="tier-spec-label">Solar Panels</span><span class="tier-spec-val">${fmt(r.panelW)} W (${r.numPanels} panels)</span></div>
           <div class="tier-spec-row"><span class="tier-spec-label">Battery Bank</span><span class="tier-spec-val">${Math.ceil(r.battCapacityAh)} Ah / ${(r.battCapacityWh/1000).toFixed(1)} kWh</span></div>
           <div class="tier-spec-row"><span class="tier-spec-label">Batteries</span><span class="tier-spec-val">${r.totalBatteries > 0 ? r.totalBatteries + ' × ' + (state.config.individualBattAh||200) + 'Ah' : '—'}</span></div>
-          <div class="tier-spec-row"><span class="tier-spec-label">Inverter</span><span class="tier-spec-val">${r.selectedInverterKVA} kVA (${inverterBrand})</span></div>
+          <div class="tier-spec-row"><span class="tier-spec-label">Inverter</span><span class="tier-spec-val">${r.inverter ? escHTML(r.inverter.label) + (r.invUnits > 1 ? ' × ' + r.invUnits : '') : r.selectedInverterKVA + ' kW'}</span></div>
           <div class="tier-spec-row"><span class="tier-spec-label">Backup Runtime</span><span class="tier-spec-val">${r.battRuntimeHrs} hrs</span></div>
           <div class="tier-spec-row"><span class="tier-spec-label">Equipment Cost</span><span class="tier-spec-val">${fmtCur(r.equipTotal)}</span></div>
         </div>
@@ -4391,7 +4428,6 @@ function auditBackBtn() {
 // ============================================================
 function renderVisualizations() {
   const opts = {
-    batteryType: document.getElementById('battery-type')?.value || 'lithium',
     markup: parseFloat(document.getElementById('markup')?.value) || 0
   };
   const r = calcSystem(state.appliances, opts);
@@ -4408,7 +4444,7 @@ function renderVisualizations() {
   document.getElementById('viz-load').textContent = fmt(r.totalLoad) + ' W';
   document.getElementById('viz-panels').textContent = r.numPanels;
   document.getElementById('viz-batts').textContent = r.totalBatteries;
-  document.getElementById('viz-inv').textContent = (r.selectedInverterKVA || 0).toFixed(1) + ' kVA';
+  document.getElementById('viz-inv').textContent = (r.selectedInverterKVA || 0) + ' kW';
 
   // Colors
   const COLORS = ['#f97316','#4f8ef7','#10d97a','#8b5cf6','#ec4899','#f59e0b','#06b6d4','#ef4444','#84cc16','#a855f7','#f43f5e','#14b8a6','#eab308','#6366f1'];
@@ -4735,10 +4771,8 @@ function renderMarketplace() {
   if (!el) return;
   // Get catalog — fall back per-tab to DEFAULT_CATALOG so new tabs (accessories)
   // always show even if localStorage has an older saved catalog without them
-  const saved = state.catalog || {};
-  const defaults = DEFAULT_CATALOG;
   const tab = _marketTab;
-  const brands = (saved[tab] && saved[tab].length) ? saved[tab] : (defaults[tab] || []);
+  const brands = getCatalog()[tab] || [];
 
   let html = '';
   brands.forEach(brand => {
@@ -4746,7 +4780,7 @@ function renderMarketplace() {
     const svg = getMarketSVG(tab, brand.brand);
 
     const cards = brand.items.map(item => {
-      const userPrice = Math.round(item.dealerPrice * 1.1);
+      const userPrice = item.userPrice || Math.round((item.dealerPrice || 0) * 1.05);
       let spec = '';
       let badge = '';
       if (tab === 'panels') {
@@ -4839,7 +4873,7 @@ function renderDashboardPriceFolders() {
     const allItems = brands.flatMap(b => b.items.map(i => ({ ...i, brandName: b.brand })));
     if (!allItems.length) return '';
     const rows = allItems.map(item => {
-      const userPrice = Math.round(item.dealerPrice * 1.1);
+      const userPrice = item.userPrice || Math.round((item.dealerPrice || 0) * 1.05);
       const qtyLabel  = sec.key === 'panels'      ? `${item.watt||''}W`
                        : sec.key === 'batteries'  ? `${item.ah||''}Ah ${item.volt||''}V`
                        : sec.key === 'inverters'  ? `${item.kw||''}kW ${item.volt||''}V`
@@ -4920,159 +4954,20 @@ function renderInstallerProfile() {
 // ============================================================
 // COMPATIBILITY CHECK
 // ============================================================
+// Compatibility check — the workbook's data-sheet checks (from sizing-engine.js)
 function runCompatibilityCheck(r) {
   if (!r || r.totalLoad === 0) return;
-  const cfg    = state.config;
-  const checks = [];
-  const battVolt    = Number(cfg.battVoltage)     || 48;
-  const invVolt     = Number(cfg.inverterVoltage) || 48;
-  const battType    = cfg.batteryType || 'lithium';
-  const invKVA      = r.selectedInverterKVA || 0;
-  const totalLoadKW = (r.totalLoad || 0) / 1000;
-
-  // 1. Battery voltage vs inverter voltage
-  const isLeadAcid = battType === 'lead';
-  const voltOk = battVolt === invVolt
-    || (isLeadAcid && battVolt === 12 && invVolt === 24)
-    || (isLeadAcid && battVolt === 12 && invVolt === 48);
-
-  if (battVolt === invVolt) {
-    checks.push({ icon:'🔋', label:'Battery ↔ Inverter Voltage',
-      detail:`${battVolt}V battery matches ${invVolt}V inverter`, status:'ok' });
-  } else if (isLeadAcid && battVolt === 12 && invVolt === 24) {
-    checks.push({ icon:'🔋', label:'Battery ↔ Inverter Voltage',
-      detail:`Lead-Acid 12V battery with 24V inverter — compatible (wire 2× 12V in series)`, status:'ok' });
-  } else if (isLeadAcid && battVolt === 12 && invVolt === 48) {
-    checks.push({ icon:'🔋', label:'Battery ↔ Inverter Voltage',
-      detail:`Lead-Acid 12V battery with 48V inverter — compatible (wire 4× 12V in series)`, status:'ok' });
-  } else {
-    checks.push({ icon:'🔋', label:'Battery ↔ Inverter Voltage',
-      detail:`${battVolt}V battery with ${invVolt}V inverter — voltage mismatch, check wiring`, status:'fail' });
-  }
-
-  // 2. Inverter kVA vs total load
-  const invKW = invKVA * 0.8;
-  if (invKW >= totalLoadKW * 1.1) {
-    checks.push({ icon:'⚡', label:'Inverter Capacity vs Load',
-      detail:`${invKVA} kVA handles ${totalLoadKW.toFixed(2)} kW load with ≥10% headroom`, status:'ok' });
-  } else if (invKW >= totalLoadKW) {
-    checks.push({ icon:'⚡', label:'Inverter Capacity vs Load',
-      detail:`${invKVA} kVA is just sufficient for ${totalLoadKW.toFixed(2)} kW — consider upsizing`, status:'warn' });
-  } else {
-    checks.push({ icon:'⚡', label:'Inverter Capacity vs Load',
-      detail:`${invKVA} kVA is undersized for ${totalLoadKW.toFixed(2)} kW load`, status:'fail' });
-  }
-
-  // 3. Battery compatibility — always show type + voltage
-  const battTypeLabel = battType === 'lithium' ? 'Lithium (LiFePO4)' : 'Lead-Acid';
-  if (battType === 'lead' && battVolt === 48) {
-    checks.push({ icon:'🔋', label:'Battery Compatibility',
-      detail:`${battTypeLabel} · ${battVolt}V — requires 4× 12V batteries in series, verify wiring configuration`, status:'warn' });
-  } else if (battType === 'lead' && battVolt === 24) {
-    checks.push({ icon:'🔋', label:'Battery Compatibility',
-      detail:`${battTypeLabel} · ${battVolt}V — requires 2× 12V batteries in series`, status:'warn' });
-  } else if (battType === 'lead') {
-    checks.push({ icon:'🔋', label:'Battery Compatibility',
-      detail:`${battTypeLabel} · ${battVolt}V — standard lead-acid configuration`, status:'ok' });
-  } else {
-    checks.push({ icon:'🔋', label:'Battery Compatibility',
-      detail:`${battTypeLabel} · ${battVolt}V — optimal for ${invVolt}V inverter systems`, status:'ok' });
-  }
-
-  // 4. Panel array vs inverter MPPT input
-  const panelW   = r.panelW || 0;
-  const panelKW  = panelW / 1000;
-  // Try to get pvInput from the catalog for the selected inverter brand
-  const invCatalog = getCatalog().inverters || [];
-  const cfgBrand   = (state.config.invBrand || state.config.inverterBrand || '').toLowerCase();
-  let mpptKW = 0;
-  invCatalog.forEach(brand => {
-    if (brand.brand.toLowerCase().includes(cfgBrand) || cfgBrand.includes(brand.brand.toLowerCase().split(' ')[0])) {
-      brand.items.forEach(item => {
-        if (item.pvInput && item.pvInput > 0) mpptKW = Math.max(mpptKW, item.pvInput);
-      });
-    }
-  });
-  // Fallback: estimate MPPT as invKVA × 1.3 (kW) if no pvInput set
-  const mpptEstimated = mpptKW === 0;
-  if (mpptKW === 0) mpptKW = invKVA * 1.3;
-
-  const mpptLabel = mpptEstimated
-    ? `~${mpptKW.toFixed(1)} kW (estimated)`
-    : `${mpptKW.toFixed(1)} kW (from catalog)`;
-
-  if (panelKW < mpptKW) {
-    checks.push({ icon:'☀️', label:'Solar Array vs Inverter MPPT',
-      detail:`Solar array ${panelKW.toFixed(1)} kWp < MPPT ${mpptLabel} ✓`, status:'ok' });
-  } else if (panelKW === mpptKW) {
-    checks.push({ icon:'☀️', label:'Solar Array vs Inverter MPPT',
-      detail:`Solar array ${panelKW.toFixed(1)} kWp exactly matches MPPT ${mpptLabel} — acceptable`, status:'ok' });
-  } else {
-    checks.push({ icon:'☀️', label:'Solar Array vs Inverter MPPT',
-      detail:`Solar array ${panelKW.toFixed(1)} kWp exceeds MPPT ${mpptLabel} — reduce array or upgrade inverter`, status:'fail' });
-  }
-
-  // 5. Battery runtime — uses same value as live calculation (battRuntimeHrs = backupDays × 24)
-  const hoursRuntime = r.battRuntimeHrs || 0;
-  if (hoursRuntime >= 8) {
-    checks.push({ icon:'⏱', label:'Battery Runtime',
-      detail:`${hoursRuntime.toFixed ? hoursRuntime.toFixed(0) : hoursRuntime} hrs — sufficient for daily use`, status:'ok' });
-  } else if (hoursRuntime >= 4) {
-    checks.push({ icon:'⏱', label:'Battery Runtime',
-      detail:`${hoursRuntime.toFixed ? hoursRuntime.toFixed(0) : hoursRuntime} hrs — adequate but consider adding capacity`, status:'warn' });
-  } else {
-    checks.push({ icon:'⏱', label:'Battery Runtime',
-      detail:`${hoursRuntime.toFixed ? hoursRuntime.toFixed(0) : hoursRuntime} hrs — battery bank may be undersized`, status:'fail' });
-  }
-
-  // 6. Parallel inverter functionality
-  const invQtyEl  = document.getElementById('inv-qty');
-  const invQty    = invQtyEl ? (parseInt(invQtyEl.value) || 1) : 1;
-  const singleInvKW = (invKVA || 0) * 0.8;
-  const parallelTotalKW = singleInvKW * invQty;
-
-  if (invQty > 1) {
-    // Check if the selected inverter brand supports parallel operation
-    const invCatalogAll = getCatalog().inverters || [];
-    let supportsParallel = null; // null = unknown, true/false = known
-    invCatalogAll.forEach(brand => {
-      if (brand.brand.toLowerCase().includes(cfgBrand) || cfgBrand.includes(brand.brand.toLowerCase().split(' ')[0])) {
-        // Growatt, Itel, SMS Hybrid all support parallel — mark as supported
-        supportsParallel = true;
-      }
-    });
-
-    const parallelDetail = `${invQty}× ${singleInvKW.toFixed(1)} kW = ${parallelTotalKW.toFixed(1)} kW combined output`;
-
-    if (parallelTotalKW >= totalLoadKW * 1.1) {
-      checks.push({ icon:'🔗', label:'Inverter Parallel Operation',
-        detail:`${parallelDetail} — ${supportsParallel !== false ? 'sufficient headroom for parallel setup' : 'verify parallel support in inverter spec sheet'}`,
-        status: supportsParallel !== false ? 'ok' : 'warn' });
-    } else if (parallelTotalKW >= totalLoadKW) {
-      checks.push({ icon:'🔗', label:'Inverter Parallel Operation',
-        detail:`${parallelDetail} — marginal headroom, consider adding another unit`, status:'warn' });
-    } else {
-      checks.push({ icon:'🔗', label:'Inverter Parallel Operation',
-        detail:`${parallelDetail} — undersized for ${totalLoadKW.toFixed(2)} kW load even with ${invQty} units`, status:'fail' });
-    }
-  } else {
-    // Single inverter — note parallel capability if load is high
-    if (totalLoadKW > singleInvKW * 0.8) {
-      checks.push({ icon:'🔗', label:'Inverter Parallel Capability',
-        detail:`Single ${singleInvKW.toFixed(1)} kW inverter near capacity — parallel operation available if load grows`,
-        status:'warn' });
-    } else {
-      checks.push({ icon:'🔗', label:'Inverter Parallel Capability',
-        detail:`Single ${singleInvKW.toFixed(1)} kW inverter — parallel expansion available if needed`,
-        status:'ok' });
-    }
-  }
+  const icons = {
+    'Inverter capacity': '⚡', 'Parallel operation': '🔗', 'Battery voltage': '🔋',
+    'PV input power': '☀️', 'PV string voltage': '🔌', 'PV input current': '〰️', 'Panel combiner': '🧩',
+  };
+  const checks = (r.checks || []).map(c => Object.assign({ icon: icons[c.label] || '🔍' }, c));
 
   const fails = checks.filter(c => c.status === 'fail').length;
   const warns = checks.filter(c => c.status === 'warn').length;
-  const badge = fails > 0 ? { text:`${fails} Issue${fails>1?'s':''}`, cls:'compat-fail' }
+  const badge = fails > 0 ? { text:`${fails} Issue${fails>1?'s':''} — change inverter or panels`, cls:'compat-fail' }
                : warns > 0 ? { text:`${warns} Warning${warns>1?'s':''}`, cls:'compat-warn' }
-               : { text:'All Compatible ✓', cls:'compat-ok' };
+               : { text:'Ready for deployment ✓', cls:'compat-ok' };
 
   const sb = document.getElementById('compat-summary-badge');
   if (sb) { sb.textContent = badge.text; sb.className = `badge ${badge.cls}`; }

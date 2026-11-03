@@ -28,3 +28,16 @@ create policy "Own rows: delete" on public.user_data
 
 revoke all on public.user_data from anon;
 grant select, insert, update, delete on public.user_data to authenticated;
+
+-- Keep-alive: a harmless function the GitHub workflow calls every few days so the
+-- free-plan project isn't paused for inactivity. Reads no data.
+create or replace function public.keepalive()
+returns timestamptz
+language sql
+stable
+security invoker
+set search_path = ''
+as $$ select now() $$;
+
+revoke all on function public.keepalive() from public;
+grant execute on function public.keepalive() to anon, authenticated;

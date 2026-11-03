@@ -137,9 +137,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .nav-badge { margin-left: auto; background: var(--accent); color: #08090c; font-size: 9.5px; font-weight: 800; border-radius: 20px; padding: 1px 7px; box-shadow: 0 0 8px rgba(245,200,66,.4); }
 .sidebar-footer { display: none; }
 /* BACK BUTTON */
-.back-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--text3); background: none; border: 1px solid var(--border); cursor: pointer; transition: all .15s; margin-bottom: 10px; }
+.back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px 8px 11px; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: var(--accent); background: var(--surface2); border: 1.5px solid rgba(249,115,22,.45); box-shadow: 0 2px 10px rgba(0,0,0,.25); cursor: pointer; transition: all .15s; margin-bottom: 12px; position: sticky; top: 10px; z-index: 30; }
+.back-btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+.back-btn:hover, .back-btn:active { background: rgba(249,115,22,.12); border-color: var(--accent); }
 .back-btn:hover { color: var(--text); border-color: var(--border2); background: var(--surface2); }
-.back-btn svg { width: 14px; height: 14px; }
+.back-btn svg { width: 17px; height: 17px; }
 /* PACKAGE BANNER */
 .pkg-banner { display: none; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 16px; border: 1px solid; align-items: center; gap: 12px; }
 .pkg-banner.visible { display: flex; }
@@ -230,7 +232,7 @@ body.light-theme .form-label { color:#6b7280; }
 /* Buttons */
 body.light-theme .btn-secondary { background:#f5f6f8; color:#374151; border-color:#d1d5db; }
 body.light-theme .btn-ghost { background:transparent; color:#6b7280; border-color:#d1d5db; }
-body.light-theme .back-btn { color:#6b7280; border-color:#d1d5db; }
+body.light-theme .back-btn { color:#ea580c; background:#ffffff; border-color:rgba(234,88,12,.45); box-shadow:0 2px 10px rgba(0,0,0,.08); }
 body.light-theme .back-btn:hover { background:#f5f6f8; color:#111; }
 /* Tabs */
 body.light-theme .tabs { border-color:#e5e7eb; }
@@ -639,6 +641,10 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
   .pkg-card:hover, .card:hover { transform: none !important; box-shadow: none !important; }
 }
 .appl-name { font-weight: 600; color: var(--text); font-size: 13px; }
+.appl-size { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-size: 10px; color: var(--text3); white-space: nowrap; }
+.appl-size-input { width: 54px; padding: 2px 4px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--font-body); font-size: 11px; text-align: center; outline: none; }
+.appl-size-input:focus { border-color: var(--accent); }
+.appl-size-w { font-family: monospace; font-size: 9.5px; color: var(--text3); }
 .appl-watts-badge { display: inline-block; font-size: 9.5px; color: var(--text3); background: var(--surface3); padding: 1px 6px; border-radius: 4px; margin-left: 5px; font-family: monospace; }
 .appl-qty-ctrl { display: flex; align-items: center; gap: 7px; }
 .qty-btn { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--border2); background: var(--surface3); color: var(--text); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all .15s; flex-shrink: 0; }
@@ -805,6 +811,19 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
 .tier-spec-val { font-weight: 600; color: var(--text); }
 .tier-footer { padding: 14px 22px; }
 .tier-recommended { position: absolute; top: 12px; right: 12px; background: var(--accent); color: #08090c; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 20px; }
+
+/* Numbers and money: Syne's wide, stylised digits are hard to read, so amounts use
+   Inter with even-width digits. Headings keep Syne. */
+.breakdown-val, .breakdown-total-val, .financing-monthly, .stat-value, .tier-price,
+.savings-val, .savings-highlight-val, .market-card-price, .price-folder-price,
+.viz-info-val, .qty-val, .quote-total-final, .quote-total-row {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.breakdown-total-val { font-size: 24px; font-weight: 800; }
+.financing-monthly { font-size: 30px; font-weight: 800; }
+.stat-value, .tier-price, .viz-info-val { font-weight: 800; }
 
 /* Model pickers and itemised accessories in the Equipment Breakdown */
 .equip-select { display: block; width: 100%; max-width: 240px; margin-top: 6px; padding: 5px 8px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: var(--font-body); font-size: 11.5px; outline: none; }
@@ -1443,7 +1462,7 @@ html { touch-action: manipulation; }
 
 <!-- SAVED AUDITS PAGE -->
 <div class="page" id="page-audits">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
@@ -1458,7 +1477,7 @@ html { touch-action: manipulation; }
 
 <!-- QUOTES PAGE -->
 <div class="page" id="page-quotes">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div class="page-title">Generated Quotes</div>
     <div class="page-desc">Client-ready off-grid system proposals</div>
@@ -1468,7 +1487,7 @@ html { touch-action: manipulation; }
 
 <!-- PRICING PAGE -->
 <div class="page" id="page-pricing">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
@@ -1492,7 +1511,7 @@ html { touch-action: manipulation; }
 
 <!-- SETTINGS PAGE -->
 <div class="page" id="page-settings">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div class="page-title">Settings</div>
     <div class="page-desc">Company info and off-grid system configuration</div>
@@ -1606,7 +1625,7 @@ html { touch-action: manipulation; }
 
 <!-- PACKAGES PAGE -->
 <div class="page" id="page-packages">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div class="page-title">Pre-Built Off-Grid Packages</div>
     <div class="page-desc">Common solar setups — click any package to pre-fill a new system design instantly</div>
@@ -1616,7 +1635,7 @@ html { touch-action: manipulation; }
 
 <!-- VISUALIZATIONS PAGE -->
 <div class="page" id="page-viz">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div class="page-title">Interactive Visualizations</div>
     <div class="page-desc">Real-time system breakdown — reflects your current design inputs</div>
@@ -1678,7 +1697,7 @@ html { touch-action: manipulation; }
 
 <!-- CRM PAGE -->
 <div class="page" id="page-crm">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
@@ -1721,7 +1740,7 @@ html { touch-action: manipulation; }
 
 <!-- MARKETPLACE PAGE -->
 <div class="page" id="page-marketplace">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px">
       <div>
@@ -1741,7 +1760,7 @@ html { touch-action: manipulation; }
 
 <!-- EDUCATION PAGE -->
 <div class="page" id="page-learn">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div class="page-title">📚 Solar Education</div>
     <div class="page-desc">Everything your clients need to know to get the most from their solar system</div>
@@ -1859,7 +1878,7 @@ html { touch-action: manipulation; }
 
 <!-- INSTALLER PROFILE PAGE -->
 <div class="page" id="page-profile">
-  <button class="back-btn" onclick="showPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+  <button class="back-btn" onclick="goBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
   <div class="page-header">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
@@ -1966,11 +1985,12 @@ html { touch-action: manipulation; }
 // ============================================================
 const DEFAULT_APPLIANCES = [
   // ACs: horsepower × 746 W; inverter ACs draw ~40% of that (workbook AUDITING rows 4–6)
-  { id:'ac1hp',   name:'AC (1hp)',         watts:746,  icon:'❄️', defaultHours:6  },
-  { id:'ac15hp',  name:'AC (1.5hp)',       watts:1119, icon:'❄️', defaultHours:6  },
-  { id:'ac2hp',   name:'AC (2hp)',         watts:1492, icon:'❄️', defaultHours:6  },
-  { id:'invac1hp',  name:'Inverter AC (1hp)',   watts:298, icon:'❄️', defaultHours:8 },
-  { id:'invac15hp', name:'Inverter AC (1.5hp)', watts:448, icon:'❄️', defaultHours:8 },
+  // hp = editable horsepower; factor = share of hp × 746 W actually drawn
+  { id:'ac1hp',   name:'AC',               hp:1,   factor:1,   watts:746,  icon:'❄️', defaultHours:6  },
+  { id:'ac15hp',  name:'AC',               hp:1.5, factor:1,   watts:1119, icon:'❄️', defaultHours:6  },
+  { id:'ac2hp',   name:'AC',               hp:2,   factor:1,   watts:1492, icon:'❄️', defaultHours:6  },
+  { id:'invac1hp',  name:'Inverter AC',    hp:1,   factor:0.4, watts:298,  icon:'❄️', defaultHours:8 },
+  { id:'invac15hp', name:'Inverter AC',    hp:1.5, factor:0.4, watts:448,  icon:'❄️', defaultHours:8 },
   { id:'fridge',  name:'Fridge / Freezer', watts:150,  icon:'🧊', defaultHours:24 },
   { id:'tv',      name:'TV',               watts:100,  icon:'📺', defaultHours:6  },
   { id:'decoder', name:'Decoder',          watts:20,   icon:'📡', defaultHours:24 },
@@ -1985,6 +2005,32 @@ const DEFAULT_APPLIANCES = [
   { id:'mobile',  name:'Mobile Charger',   watts:5,    icon:'📱', defaultHours:4  },
   { id:'misc',    name:'Miscellaneous',    watts:100,  icon:'⚡', defaultHours:4  },
 ];
+
+// Effective size of an appliance row: the installer's edit, else the default.
+// ACs are sized in horsepower (hp × 746 W × factor); everything else in watts.
+function applianceHp(a, d) {
+  d = d || state.appliances?.[a.id] || {};
+  const hp = Number(d.hp);
+  return hp > 0 ? hp : a.hp;
+}
+function applianceWatts(a, d) {
+  d = d || state.appliances?.[a.id] || {};
+  if (a.hp) return Math.round(applianceHp(a, d) * 746 * (a.factor || 1));
+  const w = Number(d.watts);
+  return w >= 0 && d.watts !== undefined && d.watts !== '' ? w : a.watts;
+}
+function updateApplianceSize(id, val) {
+  const a = DEFAULT_APPLIANCES.find(x => x.id === id);
+  if (!a) return;
+  if (!state.appliances[id] || typeof state.appliances[id] !== 'object') state.appliances[id] = { qty: 0, hours: a.defaultHours };
+  const v = Math.max(0, parseFloat(val) || 0);
+  if (a.hp) state.appliances[id].hp = v || a.hp;
+  else state.appliances[id].watts = v;
+  const lbl = document.getElementById('wlbl-' + id);
+  if (lbl) lbl.textContent = applianceWatts(a) + 'W';
+  updateRowCalc(id);
+  recalculate();
+}
 
 const DEFAULT_PRICES = {
   user: {
@@ -2449,7 +2495,16 @@ function applyStoredTheme() {
 // ============================================================
 // NAVIGATION
 // ============================================================
-function showPage(id) {
+// Each page change is a browser history step, so the back button and the phone's
+// back swipe move between SolarIQ pages instead of leaving the app.
+let _currentPage = 'dashboard';
+let _navDepth = 0;
+function showPage(id, opts) {
+  if (!document.getElementById('page-' + id)) return;
+  if (!(opts && opts.fromHistory) && id !== _currentPage) {
+    try { history.pushState({ siqPage: id }, '', '#' + id); _navDepth++; } catch (e) {}
+  }
+  _currentPage = id;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
@@ -2478,11 +2533,15 @@ function renderApplianceGrid() {
   const grid = document.getElementById('appliance-grid');
   const rows = DEFAULT_APPLIANCES.map(a => {
     const d = state.appliances[a.id] || { qty: 0, hours: a.defaultHours };
-    const deviceLoad = d.qty * a.watts;
+    const watts = applianceWatts(a, d);
+    const deviceLoad = d.qty * watts;
     const deviceEnergy = deviceLoad * d.hours;
+    const sizeInput = a.hp
+      ? `<span class="appl-size"><input class="appl-size-input" type="number" min="0.5" step="0.5" value="${applianceHp(a, d)}" onchange="updateApplianceSize('${a.id}', this.value)" aria-label="${a.name} horsepower">hp <span class="appl-size-w" id="wlbl-${a.id}">${watts}W</span></span>`
+      : `<span class="appl-size"><input class="appl-size-input" type="number" min="0" step="1" value="${watts}" onchange="updateApplianceSize('${a.id}', this.value)" aria-label="${a.name} watts">W</span>`;
     return `
     <tr id="row-${a.id}">
-      <td><span class="appl-name">${a.icon} ${a.name}</span><span class="appl-watts-badge">${a.watts}W</span></td>
+      <td><span class="appl-name">${a.icon} ${a.name}</span>${sizeInput}</td>
       <td>
         <div class="appl-qty-ctrl">
           <button class="qty-btn" onclick="adjustQty('${a.id}',-1)">−</button>
@@ -2554,7 +2613,7 @@ function updateRowCalc(id) {
   const d = state.appliances?.[id] || {};
   const qty   = Number(d.qty)    || 0;
   const hours = Number(d.hours)  || 0;
-  const watts = Number(a.watts)  || 0;
+  const watts = applianceWatts(a, d);
   const deviceLoad   = watts * qty;
   const deviceEnergy = deviceLoad * hours;
   const dloadEl   = document.getElementById('dload-'   + id);
@@ -2579,13 +2638,14 @@ function calculateTotals() {
     const data = state.appliances?.[device.id] || {};
     const qty   = Number(data.qty)   || 0;
     const hours = Number(data.hours) || 0;
-    const watts = Number(device.watts) || 0;
+    const watts = applianceWatts(device, data);
     const load   = watts * qty;
     const energy = load * hours;
     totalLoad   += load;
     totalEnergy += energy;
     if (load > 0) {
-      deviceRows.push({ name: device.name, watts, qty, hours, deviceLoad: load, deviceEnergy: energy });
+      const name = device.hp ? `${device.name} (${applianceHp(device, data)}hp)` : device.name;
+      deviceRows.push({ name, watts, qty, hours, deviceLoad: load, deviceEnergy: energy });
     }
   });
   return { totalLoad, totalEnergy, deviceRows };
@@ -4419,7 +4479,7 @@ function auditBackBtn() {
     clearPackageBanner();
     showPage('packages');
   } else {
-    showPage('dashboard');
+    goBack();
   }
 }
 
@@ -4492,7 +4552,7 @@ function renderVisualizations() {
   }).join('');
   const legend = costs.map(c => `<div class="viz-legend-item"><div class="viz-legend-dot" style="background:${c.color}"></div>${c.label}: ${fmtCur(c.val)} (${Math.round(c.val/totalCost*100)}%)</div>`).join('');
   document.getElementById('viz-cost-donut').innerHTML = `
-    <svg width="170" height="170" viewBox="0 0 170 170" style="flex-shrink:0">${arcs}<circle cx="${CX}" cy="${CY}" r="38" fill="var(--surface)"/><text x="${CX}" y="${CY - 4}" text-anchor="middle" fill="var(--text)" font-family="var(--font-display)" font-size="12" font-weight="800">${fmtCur(totalCost)}</text><text x="${CX}" y="${CY + 10}" text-anchor="middle" fill="var(--text3)" font-size="8">TOTAL</text></svg>
+    <svg width="170" height="170" viewBox="0 0 170 170" style="flex-shrink:0">${arcs}<circle cx="${CX}" cy="${CY}" r="38" fill="var(--surface)"/><text x="${CX}" y="${CY - 4}" text-anchor="middle" fill="var(--text)" font-family="Inter, sans-serif" font-size="12" font-weight="800">${fmtCur(totalCost)}</text><text x="${CX}" y="${CY + 10}" text-anchor="middle" fill="var(--text3)" font-size="8">TOTAL</text></svg>
     <div class="viz-legend" style="flex-direction:column;gap:6px">${legend}</div>`;
 
   // — System sizing bars —
@@ -4994,6 +5054,38 @@ function renderAppliances() { renderApplianceGrid(); calculateSystem(); }
 document.addEventListener('DOMContentLoaded', () => {
   init();
 });
+
+function goBack() {
+  if (_navDepth > 0) history.back();
+  else if (_currentPage !== 'dashboard') showPage('dashboard', { fromHistory: true });
+}
+try { history.replaceState(Object.assign({}, history.state, { siqPage: 'dashboard' }), ''); } catch (e) {}
+window.addEventListener('popstate', e => {
+  const page = e.state && e.state.siqPage;
+  if (!page) return;
+  _navDepth = Math.max(0, _navDepth - 1);
+  if (page !== _currentPage) showPage(page, { fromHistory: true });
+});
+
+// Swipe right from the left edge to go back. Browsers already turn their own back
+// swipe into history.back(); this covers the home-screen app, which has no browser UI.
+(function () {
+  const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone;
+  if (!standalone) return;
+  let sx = 0, sy = 0, tracking = false;
+  document.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    tracking = e.touches.length === 1 && t.clientX < 28 && _currentPage !== 'dashboard';
+    sx = t.clientX; sy = t.clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+    if (dx > 70 && dy < 60) goBack();
+  }, { passive: true });
+})();
 
 // Fallback if DOMContentLoaded already fired (e.g. script deferred)
 if (document.readyState === 'complete' || document.readyState === 'interactive') {

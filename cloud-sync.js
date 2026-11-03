@@ -250,28 +250,30 @@
 
   function setStatus(s) {
     status = s;
-    const el = document.getElementById('siq-sync-status');
-    if (!el) return;
-    el.textContent = { saving: 'Saving to cloud…', saved: 'All changes saved to the cloud', error: 'Cloud save failed — will retry', idle: '' }[s];
-    el.style.color = s === 'error' ? '#f59e0b' : '';
+    document.querySelectorAll('.siq-sync-status').forEach(el => {
+      el.textContent = { saving: 'Saving to cloud…', saved: 'All changes saved to the cloud', error: 'Cloud save failed — will retry', idle: '' }[s];
+      el.style.color = s === 'error' ? '#f59e0b' : '';
+    });
   }
 
+  // Account card (who's signed in, sync status, Sign out) on the Profile and Settings pages
   function addAccountCard() {
-    const page = document.getElementById('page-settings');
-    if (!page || document.getElementById('siq-account')) return;
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.id = 'siq-account';
-    card.style.marginBottom = '16px';
-    card.innerHTML = `
+    ['page-profile', 'page-settings'].forEach(pageId => {
+      const page = document.getElementById(pageId);
+      if (!page || page.querySelector('.siq-account')) return;
+      const card = document.createElement('div');
+      card.className = 'card siq-account';
+      card.style.marginBottom = '16px';
+      card.innerHTML = `
 <div class="card-title">Account</div>
 <div class="siq-account-line">Signed in as <strong></strong></div>
-<div class="siq-account-line" id="siq-sync-status"></div>
-<button class="btn btn-secondary" type="button">Sign out</button>`;
-    card.querySelector('strong').textContent = user.email;
-    card.querySelector('button').addEventListener('click', signOut);
-    const header = page.querySelector('.page-header');
-    header ? header.after(card) : page.prepend(card);
+<div class="siq-account-line siq-sync-status"></div>
+<button class="btn btn-secondary siq-signout" type="button">Sign out</button>`;
+      card.querySelector('strong').textContent = user.email;
+      card.querySelector('button').addEventListener('click', signOut);
+      const header = page.querySelector('.page-header');
+      header ? header.after(card) : page.prepend(card);
+    });
     setStatus(status);
   }
 

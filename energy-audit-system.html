@@ -814,6 +814,13 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
 @media(min-width:769px) and (max-width:900px){
   .crm-pipeline { grid-template-columns: 1fr 1fr; }
 }
+/* Stop phones zooming in: double-tap zoom on buttons, and iOS auto-zoom on
+   any field under 16px. Pinch-to-zoom still works. */
+html { touch-action: manipulation; }
+@media(max-width:768px), (pointer:coarse){
+  input, select, textarea { font-size: 16px !important; }
+  .hours-input { width: 52px; }
+}
 
 </style>
 </head>

@@ -640,8 +640,9 @@ details[open] > summary span:first-child { transform: rotate(90deg); }
   .stat-card:hover, .quick-action-btn:hover, .audit-item:hover,
   .pkg-card:hover, .card:hover { transform: none !important; box-shadow: none !important; }
 }
-.appl-name { font-weight: 600; color: var(--text); font-size: 13px; }
-.appl-size { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-size: 10px; color: var(--text3); white-space: nowrap; }
+/* Device cell: name on its own line, size box underneath — same layout on every row */
+.appl-name { display: block; font-weight: 600; color: var(--text); font-size: 13px; white-space: nowrap; }
+.appl-size { display: flex; align-items: center; gap: 5px; margin-top: 5px; font-size: 10.5px; color: var(--text3); white-space: nowrap; }
 .appl-size-input { width: 54px; padding: 2px 4px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--font-body); font-size: 11px; text-align: center; outline: none; }
 .appl-size-input:focus { border-color: var(--accent); }
 .appl-size-w { font-family: monospace; font-size: 9.5px; color: var(--text3); }

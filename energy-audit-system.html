@@ -4,9 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>SolarIQ — Off-Grid System Design</title>
+<meta name="description" content="SolarIQ — energy audits, off-grid solar system sizing, quotes and PDF proposals for installers.">
+<meta name="theme-color" content="#020203">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="canonical" href="https://solidity0.github.io/solariq/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SolarIQ">
+<meta property="og:title" content="SolarIQ — Off-Grid System Design">
+<meta property="og:description" content="Energy audits, off-grid solar system sizing, quotes and PDF proposals for installers.">
+<meta property="og:url" content="https://solidity0.github.io/solariq/">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script>
+// Fall back to in-memory storage when localStorage is blocked (private mode, disabled site data)
+(function() {
+  try { localStorage.setItem('__solariq_test', '1'); localStorage.removeItem('__solariq_test'); }
+  catch (e) {
+    const mem = {};
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: {
+      getItem: k => (k in mem ? mem[k] : null),
+      setItem: (k, v) => { mem[k] = String(v); },
+      removeItem: k => { delete mem[k]; },
+      clear: () => { for (const k in mem) delete mem[k]; },
+      key: i => Object.keys(mem)[i] ?? null,
+      get length() { return Object.keys(mem).length; }
+    }});
+  }
+})();
+
 // Cloud save stubs — no-ops when login is disabled
 window.cloudSaveAudit  = async () => null;
 window.cloudSaveQuote  = async () => null;
@@ -45,7 +75,6 @@ window.toggleTheme = function() {
 })();
 </script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   --bg:        #020203;

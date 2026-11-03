@@ -1,0 +1,13 @@
+{
+  "name": "SolarIQ — Off-Grid System Design",
+  "short_name": "SolarIQ",
+  "description": "Energy audits, off-grid solar system sizing, quotes and PDF proposals.",
+  "start_url": "energy-audit-system.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#020203",
+  "theme_color": "#020203",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

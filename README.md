@@ -12,4 +12,6 @@ Hosted on GitHub Pages from the `main` branch. `index.html` redirects to `energy
 
 ## Notes
 
-App data (projects, CRM, installer settings, theme) is saved in the browser's `localStorage`, so it stays on the visitor's device.
+App data (projects, CRM, installer settings, theme) is saved in the browser's `localStorage`, so it stays on the visitor's device. If the browser blocks storage (for example some private modes), the app still runs but nothing is kept after the tab closes.
+
+`favicon.svg` and `manifest.webmanifest` provide the site icon and let the app be installed to a phone's home screen.

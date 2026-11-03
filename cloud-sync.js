@@ -6,7 +6,7 @@
   const cfg = window.SOLARIQ_SUPABASE || {};
   if (!cfg.url || !cfg.anonKey) return;
 
-  const SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  const SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.min.js';
   const SYNC_KEYS = ['solariq_state', 'solariq_crm', 'solariq_installer'];
   const OWNER_KEY = 'solariq_owner';     // which account the local copy belongs to
   const PENDING_KEY = 'solariq_pending'; // keys changed locally but not yet saved to the cloud

@@ -140,12 +140,13 @@
   // ---------------- UI ----------------
   const css = `
 #siq-auth { position: fixed; inset: 0; z-index: 10000; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
-#siq-auth .siq-box { width: 100%; max-width: 380px; }
-#siq-auth .siq-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+#siq-auth .siq-box { width: 100%; max-width: 380px; text-align: center; }
+#siq-auth .siq-brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px; }
 #siq-auth .siq-brand-name { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--text); }
 #siq-auth .siq-sub { font-size: 13px; color: var(--text2); margin-bottom: 18px; }
+#siq-auth .form-label { display: block; text-align: center; }
 #siq-auth .btn { width: 100%; justify-content: center; margin-top: 6px; }
-#siq-auth .siq-links { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 12px; }
+#siq-auth .siq-links { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-top: 14px; font-size: 12px; }
 #siq-auth .siq-links a { color: var(--accent); cursor: pointer; text-decoration: none; }
 #siq-auth .siq-msg { font-size: 12px; margin-top: 12px; min-height: 16px; color: var(--text2); }
 #siq-auth .siq-msg.err { color: #f04545; }
